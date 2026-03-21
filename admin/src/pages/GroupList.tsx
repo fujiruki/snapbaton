@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Plus, Grid, List, Image as ImageIcon } from 'lucide-react';
+import { Plus, Grid, List, Image as ImageIcon, Smartphone, Copy } from 'lucide-react';
 import api from '../api';
 
 interface Group {
@@ -81,6 +81,33 @@ export function GroupList({ onSelectGroup }: Props) {
           {viewMode === 'grid' ? <List size={16} /> : <Grid size={16} />}
         </button>
       </div>
+
+      {snapbatonData.canManage && snapbatonData.uploadUrl && (
+        <div className="sb-upload-info">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+            <Smartphone size={16} />
+            <strong>スマホアップロード</strong>
+          </div>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+            <code style={{ background: '#f0f0f1', padding: '4px 8px', borderRadius: '4px', fontSize: '12px', wordBreak: 'break-all' }}>
+              {snapbatonData.uploadUrl}
+            </code>
+            <button
+              className="button button-small"
+              onClick={() => {
+                navigator.clipboard.writeText(snapbatonData.uploadUrl);
+              }}
+              title="URLをコピー"
+            >
+              <Copy size={12} />
+            </button>
+          </div>
+          <p style={{ margin: '6px 0 0', fontSize: '12px', color: '#646970' }}>
+            パスコード: <strong>{snapbatonData.uploadPass}</strong>
+            　｜　このURLをスマホに送って、ホーム画面に追加すると便利です
+          </p>
+        </div>
+      )}
 
       {showCreate && (
         <div className="sb-create-form">

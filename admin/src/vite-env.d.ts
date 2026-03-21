@@ -8,6 +8,8 @@ interface SnapBatonData {
   canEdit: boolean;
   canDelete: boolean;
   canManage: boolean;
+  uploadUrl: string;
+  uploadPass: string;
 }
 
 declare const snapbatonData: SnapBatonData;

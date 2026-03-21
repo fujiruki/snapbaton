@@ -92,13 +92,15 @@ class Admin {
 		);
 
 		wp_localize_script( 'snapbaton-admin', 'snapbatonData', [
-			'apiBase'  => rest_url( 'snapbaton/v1' ),
-			'nonce'    => wp_create_nonce( 'wp_rest' ),
-			'page'     => sanitize_text_field( $_GET['page'] ?? '' ),
-			'userId'   => get_current_user_id(),
-			'canEdit'  => current_user_can( 'edit_posts' ),
-			'canDelete' => current_user_can( 'edit_others_posts' ),
-			'canManage' => current_user_can( 'manage_options' ),
+			'apiBase'    => rest_url( 'snapbaton/v1' ),
+			'nonce'      => wp_create_nonce( 'wp_rest' ),
+			'page'       => sanitize_text_field( $_GET['page'] ?? '' ),
+			'userId'     => get_current_user_id(),
+			'canEdit'    => current_user_can( 'edit_posts' ),
+			'canDelete'  => current_user_can( 'edit_others_posts' ),
+			'canManage'  => current_user_can( 'manage_options' ),
+			'uploadUrl'  => rest_url( 'snapbaton/v1/upload-page' ),
+			'uploadPass' => current_user_can( 'manage_options' ) ? get_option( 'snapbaton_upload_passcode', '' ) : '',
 		] );
 	}
 }
