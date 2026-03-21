@@ -145,6 +145,7 @@ class RestApi {
 
 		foreach ( $groups as &$group ) {
 			$group->image_count     = (int) $group->image_count;
+			$group->is_public       = (int) $group->is_public;
 			$group->cover_thumbnail = $group->cover_attachment_id
 				? wp_get_attachment_image_url( $group->cover_attachment_id, 'medium' )
 				: null;
@@ -167,6 +168,7 @@ class RestApi {
 			return new \WP_Error( 'not_found', __( 'Group not found.', 'snapbaton' ), [ 'status' => 404 ] );
 		}
 
+		$group->is_public = (int) $group->is_public;
 		$group->tags = $wpdb->get_col( $wpdb->prepare(
 			"SELECT t.name FROM {$prefix}tags t
 			 INNER JOIN {$prefix}group_tags gt ON t.id = gt.tag_id

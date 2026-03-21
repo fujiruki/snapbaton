@@ -114,7 +114,7 @@ export function GroupDetail({ groupId, onBack }: Props) {
   // 公開トグル
   const handleTogglePublic = async () => {
     if (!group) return;
-    const newVal = group.is_public ? 0 : 1;
+    const newVal = Number(group.is_public) ? 0 : 1;
     try {
       await api.put(`/groups/${groupId}`, { is_public: newVal });
       setGroup({ ...group, is_public: newVal });
@@ -212,12 +212,12 @@ export function GroupDetail({ groupId, onBack }: Props) {
               <Tag size={12} /> {showGroupTags ? 'タグを閉じる' : 'グループタグを編集'}
             </button>
             <button
-              className={`button button-small${group.is_public ? ' sb-btn-public-on' : ''}`}
+              className={`button button-small${Number(group.is_public) ? ' sb-btn-public-on' : ''}`}
               onClick={handleTogglePublic}
               style={{ fontSize: '12px', marginLeft: '4px' }}
-              title={group.is_public ? '公開ギャラリーに表示中' : '非公開'}
+              title={Number(group.is_public) ? '公開ギャラリーに表示中' : '非公開'}
             >
-              <Globe size={12} /> {group.is_public ? '公開中' : '非公開'}
+              <Globe size={12} /> {Number(group.is_public) ? '公開中' : '非公開'}
             </button>
           </>
         )}
