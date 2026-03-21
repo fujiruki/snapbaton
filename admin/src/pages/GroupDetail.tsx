@@ -1,8 +1,9 @@
 import { useEffect, useState, useRef, DragEvent } from 'react';
-import { ArrowLeft, Upload, Grid, List, Copy, Download, Link, Image as ImageIcon } from 'lucide-react';
+import { ArrowLeft, Upload, Grid, List, Copy, Download, Link, Image as ImageIcon, Tag } from 'lucide-react';
 import api from '../api';
 import { useToast } from '../hooks/useToast';
 import { Toast } from '../components/Toast';
+import { TagInput } from '../components/TagInput';
 
 interface Group {
   id: number;
@@ -18,6 +19,7 @@ interface ImageItem {
   url: string;
   thumbnail: string;
   sort_order: number;
+  tags: string[];
 }
 
 interface Props {
@@ -29,10 +31,11 @@ export function GroupDetail({ groupId, onBack }: Props) {
   const [group, setGroup] = useState<Group | null>(null);
   const [images, setImages] = useState<ImageItem[]>([]);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  const [editingId, setEditingId] = useState<number | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadCount, setUploadCount] = useState({ done: 0, total: 0 });
   const [dragOver, setDragOver] = useState(false);
+  const [showGroupTags, setShowGroupTags] = useState(false);
+  const [expandedTagId, setExpandedTagId] = useState<number | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const toast = useToast();
 
@@ -70,11 +73,37 @@ export function GroupDetail({ groupId, onBack }: Props) {
     }
   };
 
-  const handleUpdateImage = async (id: number, data: { title?: string; description?: string }) => {
-    await api.put(`/images/${id}`, data);
-    setImages((prev) => prev.map((img) => (img.id === id ? { ...img, ...data } : img)));
-    setEditingId(null);
+  // フォーカス外れで自動保存（タイトル）
+  const handleSaveTitle = async (id: number, value: string) => {
+    const img = images.find((i) => i.id === id);
+    if (!img || img.title === value) return;
+    await api.put(`/images/${id}`, { title: value });
+    setImages((prev) => prev.map((i) => (i.id === id ? { ...i, title: value } : i)));
     toast.show('保存しました');
+  };
+
+  // フォーカス外れで自動保存（説明文）
+  const handleSaveDescription = async (id: number, value: string) => {
+    const img = images.find((i) => i.id === id);
+    if (!img || img.description === value) return;
+    await api.put(`/images/${id}`, { description: value });
+    setImages((prev) => prev.map((i) => (i.id === id ? { ...i, description: value } : i)));
+    toast.show('保存しました');
+  };
+
+  // 画像タグ保存
+  const handleSaveImageTags = async (id: number, tags: string[]) => {
+    await api.put(`/images/${id}`, { tags });
+    setImages((prev) => prev.map((i) => (i.id === id ? { ...i, tags } : i)));
+    toast.show('タグを更新しました');
+  };
+
+  // グループタグ保存
+  const handleSaveGroupTags = async (tags: string[]) => {
+    if (!group) return;
+    await api.put(`/groups/${groupId}`, { tags });
+    setGroup({ ...group, tags });
+    toast.show('グループタグを更新しました');
   };
 
   const copyToClipboard = (text: string, label: string) => {
@@ -109,13 +138,28 @@ export function GroupDetail({ groupId, onBack }: Props) {
         <p style={{ color: '#646970', margin: '4px 0 0' }}>{group.description}</p>
       )}
 
-      {group.tags?.length > 0 && (
-        <div className="sb-tags" style={{ marginTop: '8px' }}>
-          {group.tags.map((tag) => (
-            <span key={tag} className="sb-tag">{tag}</span>
-          ))}
-        </div>
-      )}
+      {/* グループタグ */}
+      <div style={{ margin: '8px 0' }}>
+        {group.tags?.length > 0 && !showGroupTags && (
+          <div className="sb-tags" style={{ marginBottom: '4px' }}>
+            {group.tags.map((tag) => (
+              <span key={tag} className="sb-tag">{tag}</span>
+            ))}
+          </div>
+        )}
+        {snapbatonData.canEdit && (
+          <button
+            className="button button-small"
+            onClick={() => setShowGroupTags(!showGroupTags)}
+            style={{ fontSize: '12px' }}
+          >
+            <Tag size={12} /> {showGroupTags ? 'タグを閉じる' : 'グループタグを編集'}
+          </button>
+        )}
+        {showGroupTags && (
+          <TagInput tags={group.tags ?? []} onChange={handleSaveGroupTags} />
+        )}
+      </div>
 
       <div className="sb-toolbar">
         <button
@@ -171,34 +215,47 @@ export function GroupDetail({ groupId, onBack }: Props) {
             <div key={img.id} className="sb-image-card">
               <img src={img.thumbnail || img.url} alt={img.title} />
               <div className="sb-image-card-body">
-                {editingId === img.id ? (
-                  <div className="sb-inline-edit">
-                    <input
-                      type="text"
-                      defaultValue={img.title}
-                      placeholder="タイトル"
-                      autoFocus
-                      onBlur={(e) => handleUpdateImage(img.id, { title: e.target.value })}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
-                        if (e.key === 'Escape') setEditingId(null);
-                      }}
-                    />
-                    <textarea
-                      defaultValue={img.description}
-                      placeholder="説明文"
-                      rows={2}
-                      style={{ marginTop: '4px' }}
-                      onBlur={(e) => handleUpdateImage(img.id, { description: e.target.value })}
-                    />
+                <input
+                  type="text"
+                  defaultValue={img.title}
+                  placeholder="タイトル"
+                  className="sb-autosave-input"
+                  style={{ width: '100%', fontWeight: 600, fontSize: '13px', border: '1px solid transparent', padding: '2px 4px', borderRadius: '2px' }}
+                  onFocus={(e) => e.target.style.borderColor = '#2271b1'}
+                  onBlur={(e) => { e.target.style.borderColor = 'transparent'; handleSaveTitle(img.id, e.target.value); }}
+                  readOnly={!snapbatonData.canEdit}
+                />
+                <textarea
+                  defaultValue={img.description}
+                  placeholder={snapbatonData.canEdit ? '説明文を入力...' : ''}
+                  rows={2}
+                  style={{ width: '100%', fontSize: '12px', color: '#646970', border: '1px solid transparent', padding: '2px 4px', borderRadius: '2px', resize: 'vertical', marginTop: '2px' }}
+                  onFocus={(e) => e.target.style.borderColor = '#2271b1'}
+                  onBlur={(e) => { e.target.style.borderColor = 'transparent'; handleSaveDescription(img.id, e.target.value); }}
+                  readOnly={!snapbatonData.canEdit}
+                />
+                {/* 画像タグ */}
+                {img.tags?.length > 0 && expandedTagId !== img.id && (
+                  <div className="sb-tags" style={{ marginTop: '4px', marginBottom: '0' }}>
+                    {img.tags.map((tag) => (
+                      <span key={tag} className="sb-tag" style={{ fontSize: '10px', padding: '1px 6px' }}>{tag}</span>
+                    ))}
                   </div>
-                ) : (
-                  <div onClick={() => snapbatonData.canEdit && setEditingId(img.id)}>
-                    <p className="sb-image-title">{img.title || '無題'}</p>
-                    <p className="sb-image-desc">
-                      {img.description || (snapbatonData.canEdit ? 'クリックして説明を追加' : '')}
-                    </p>
+                )}
+                {snapbatonData.canEdit && (
+                  <div style={{ marginTop: '4px' }}>
+                    <button
+                      type="button"
+                      className="sb-tag-other"
+                      style={{ fontSize: '10px', padding: '1px 6px' }}
+                      onClick={() => setExpandedTagId(expandedTagId === img.id ? null : img.id)}
+                    >
+                      <Tag size={10} /> {expandedTagId === img.id ? '閉じる' : 'タグ'}
+                    </button>
                   </div>
+                )}
+                {expandedTagId === img.id && (
+                  <TagInput tags={img.tags ?? []} onChange={(tags) => handleSaveImageTags(img.id, tags)} />
                 )}
               </div>
               <div className="sb-image-card-actions">
@@ -230,6 +287,7 @@ export function GroupDetail({ groupId, onBack }: Props) {
               <th style={{ width: '80px' }}>画像</th>
               <th>タイトル</th>
               <th>説明文</th>
+              <th style={{ width: '150px' }}>タグ</th>
               <th style={{ width: '140px' }}>操作</th>
             </tr>
           </thead>
@@ -250,7 +308,8 @@ export function GroupDetail({ groupId, onBack }: Props) {
                     placeholder="タイトル"
                     className="regular-text"
                     style={{ width: '100%' }}
-                    onBlur={(e) => handleUpdateImage(img.id, { title: e.target.value })}
+                    onBlur={(e) => handleSaveTitle(img.id, e.target.value)}
+                    readOnly={!snapbatonData.canEdit}
                   />
                 </td>
                 <td>
@@ -260,8 +319,33 @@ export function GroupDetail({ groupId, onBack }: Props) {
                     className="large-text"
                     rows={2}
                     style={{ width: '100%' }}
-                    onBlur={(e) => handleUpdateImage(img.id, { description: e.target.value })}
+                    onBlur={(e) => handleSaveDescription(img.id, e.target.value)}
+                    readOnly={!snapbatonData.canEdit}
                   />
+                </td>
+                <td>
+                  {img.tags?.length > 0 && expandedTagId !== img.id && (
+                    <div className="sb-tags" style={{ marginBottom: '4px' }}>
+                      {img.tags.map((tag) => (
+                        <span key={tag} className="sb-tag" style={{ fontSize: '10px', padding: '1px 6px' }}>{tag}</span>
+                      ))}
+                    </div>
+                  )}
+                  {snapbatonData.canEdit && (
+                    <>
+                      <button
+                        type="button"
+                        className="sb-tag-other"
+                        style={{ fontSize: '10px' }}
+                        onClick={() => setExpandedTagId(expandedTagId === img.id ? null : img.id)}
+                      >
+                        <Tag size={10} /> {expandedTagId === img.id ? '閉じる' : 'タグ編集'}
+                      </button>
+                      {expandedTagId === img.id && (
+                        <TagInput tags={img.tags ?? []} onChange={(tags) => handleSaveImageTags(img.id, tags)} />
+                      )}
+                    </>
+                  )}
                 </td>
                 <td>
                   <div style={{ display: 'flex', gap: '4px' }}>

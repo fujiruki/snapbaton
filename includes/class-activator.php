@@ -68,6 +68,13 @@ class Activator {
 			KEY deleted_at (deleted_at)
 		) {$charset_collate};
 
+		CREATE TABLE {$prefix}image_tags (
+			image_id bigint(20) unsigned NOT NULL,
+			tag_id bigint(20) unsigned NOT NULL,
+			PRIMARY KEY  (image_id, tag_id),
+			KEY tag_id (tag_id)
+		) {$charset_collate};
+
 		CREATE TABLE {$prefix}post_sets (
 			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
 			title varchar(255) NOT NULL DEFAULT '',

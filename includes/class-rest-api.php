@@ -120,6 +120,12 @@ class RestApi {
 			'callback'            => [ self::class, 'get_tags' ],
 			'permission_callback' => [ Permissions::class, 'can_view' ],
 		] );
+
+		register_rest_route( self::NAMESPACE, '/tags/recent', [
+			'methods'             => 'GET',
+			'callback'            => [ self::class, 'get_recent_tags' ],
+			'permission_callback' => [ Permissions::class, 'can_view' ],
+		] );
 	}
 
 	// --- Groups ---
@@ -247,6 +253,12 @@ class RestApi {
 		foreach ( $images as &$image ) {
 			$image->url       = wp_get_attachment_url( $image->attachment_id );
 			$image->thumbnail = wp_get_attachment_image_url( $image->attachment_id, 'medium' );
+			$image->tags      = $wpdb->get_col( $wpdb->prepare(
+				"SELECT t.name FROM {$prefix}tags t
+				 INNER JOIN {$prefix}image_tags it ON t.id = it.tag_id
+				 WHERE it.image_id = %d",
+				$image->id
+			) );
 		}
 
 		return rest_ensure_response( $images );
@@ -268,6 +280,12 @@ class RestApi {
 		$image->url       = wp_get_attachment_url( $image->attachment_id );
 		$image->thumbnail = wp_get_attachment_image_url( $image->attachment_id, 'medium' );
 		$image->full_url  = wp_get_attachment_url( $image->attachment_id );
+		$image->tags      = $wpdb->get_col( $wpdb->prepare(
+			"SELECT t.name FROM {$prefix}tags t
+			 INNER JOIN {$prefix}image_tags it ON t.id = it.tag_id
+			 WHERE it.image_id = %d",
+			$id
+		) );
 
 		return rest_ensure_response( $image );
 	}
@@ -335,6 +353,10 @@ class RestApi {
 		if ( ! empty( $data ) ) {
 			$data['updated_at'] = current_time( 'mysql' );
 			$wpdb->update( "{$prefix}images", $data, [ 'id' => $id ] );
+		}
+
+		if ( $request->has_param( 'tags' ) ) {
+			self::sync_image_tags( $id, $request->get_param( 'tags' ) );
 		}
 
 		return rest_ensure_response( [ 'id' => $id ] );
@@ -539,6 +561,50 @@ class RestApi {
 
 			$wpdb->insert( "{$prefix}group_tags", [
 				'group_id' => $group_id,
+				'tag_id'   => $tag_id,
+			] );
+		}
+	}
+
+	public static function get_recent_tags( \WP_REST_Request $request ): \WP_REST_Response {
+		global $wpdb;
+		$prefix = $wpdb->prefix . 'snapbaton_';
+
+		$tags = $wpdb->get_col(
+			"SELECT DISTINCT t.name FROM {$prefix}tags t
+			 LEFT JOIN {$prefix}group_tags gt ON t.id = gt.tag_id
+			 LEFT JOIN {$prefix}image_tags it ON t.id = it.tag_id
+			 WHERE gt.tag_id IS NOT NULL OR it.tag_id IS NOT NULL
+			 ORDER BY t.id DESC
+			 LIMIT 10"
+		);
+
+		return rest_ensure_response( $tags );
+	}
+
+	private static function sync_image_tags( int $image_id, array $tag_names ): void {
+		global $wpdb;
+		$prefix = $wpdb->prefix . 'snapbaton_';
+
+		$wpdb->delete( "{$prefix}image_tags", [ 'image_id' => $image_id ] );
+
+		foreach ( $tag_names as $name ) {
+			$name = sanitize_text_field( $name );
+			if ( empty( $name ) ) {
+				continue;
+			}
+
+			$tag_id = $wpdb->get_var(
+				$wpdb->prepare( "SELECT id FROM {$prefix}tags WHERE name = %s", $name )
+			);
+
+			if ( ! $tag_id ) {
+				$wpdb->insert( "{$prefix}tags", [ 'name' => $name ] );
+				$tag_id = $wpdb->insert_id;
+			}
+
+			$wpdb->insert( "{$prefix}image_tags", [
+				'image_id' => $image_id,
 				'tag_id'   => $tag_id,
 			] );
 		}
