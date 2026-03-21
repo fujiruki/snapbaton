@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef, DragEvent } from 'react';
-import { ArrowLeft, Upload, Grid, List, Copy, Download, Link, Image as ImageIcon, Tag } from 'lucide-react';
+import { ArrowLeft, Upload, Grid, List, Copy, Download, Link, Image as ImageIcon, Tag, Eraser } from 'lucide-react';
 import api from '../api';
 import { useToast } from '../hooks/useToast';
 import { Toast } from '../components/Toast';
@@ -122,6 +122,31 @@ export function GroupDetail({ groupId, onBack }: Props) {
     }
   };
 
+  // クリア（履歴に保存してからテキストエリアをクリア）
+  const handleClearDescription = async (img: ImageItem) => {
+    if (!img.description && !img.title) return;
+    // 履歴に保存
+    const history = JSON.parse(localStorage.getItem('sb_clear_history') || '[]');
+    history.unshift({
+      imageId: img.id,
+      title: img.title,
+      description: img.description,
+      groupName: group?.name ?? '',
+      clearedAt: new Date().toISOString(),
+    });
+    // 最大100件保持
+    if (history.length > 100) history.length = 100;
+    localStorage.setItem('sb_clear_history', JSON.stringify(history));
+    // DBをクリア
+    try {
+      await api.put(`/images/${img.id}`, { title: '', description: '' });
+      setImages((prev) => prev.map((i) => (i.id === img.id ? { ...i, title: '', description: '' } : i)));
+      toast.show('履歴に保存してクリアしました');
+    } catch {
+      toast.show('クリアに失敗しました');
+    }
+  };
+
   const copyToClipboard = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
     toast.show(`${label}をコピーしました`);
@@ -228,7 +253,7 @@ export function GroupDetail({ groupId, onBack }: Props) {
       {viewMode === 'grid' ? (
         <div className="sb-image-grid">
           {images.map((img) => (
-            <div key={img.id} className="sb-image-card">
+            <div key={`${img.id}-${img.title}-${img.description}`} className="sb-image-card">
               <img src={img.thumbnail || img.url} alt={img.title} />
               <div className="sb-image-card-body">
                 <input
@@ -284,6 +309,13 @@ export function GroupDetail({ groupId, onBack }: Props) {
                 </button>
                 <button
                   className="button button-small"
+                  onClick={() => handleClearDescription(img)}
+                  title="履歴に保存してクリア"
+                >
+                  <Eraser size={12} />
+                </button>
+                <button
+                  className="button button-small"
                   onClick={() => copyShareUrl(img.id)}
                   title="共有URLをコピー"
                 >
@@ -309,7 +341,7 @@ export function GroupDetail({ groupId, onBack }: Props) {
           </thead>
           <tbody>
             {images.map((img) => (
-              <tr key={img.id}>
+              <tr key={`${img.id}-${img.title}-${img.description}`}>
                 <td>
                   <img
                     src={img.thumbnail || img.url}
@@ -371,6 +403,13 @@ export function GroupDetail({ groupId, onBack }: Props) {
                       title="説明文をコピー"
                     >
                       <Copy size={12} />
+                    </button>
+                    <button
+                      className="button button-small"
+                      onClick={() => handleClearDescription(img)}
+                      title="クリア"
+                    >
+                      <Eraser size={12} />
                     </button>
                     <button
                       className="button button-small"
