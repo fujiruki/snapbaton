@@ -77,33 +77,49 @@ export function GroupDetail({ groupId, onBack }: Props) {
   const handleSaveTitle = async (id: number, value: string) => {
     const img = images.find((i) => i.id === id);
     if (!img || img.title === value) return;
-    await api.put(`/images/${id}`, { title: value });
-    setImages((prev) => prev.map((i) => (i.id === id ? { ...i, title: value } : i)));
-    toast.show('保存しました');
+    try {
+      await api.put(`/images/${id}`, { title: value });
+      setImages((prev) => prev.map((i) => (i.id === id ? { ...i, title: value } : i)));
+      toast.show('保存しました');
+    } catch {
+      toast.show('保存に失敗しました');
+    }
   };
 
   // フォーカス外れで自動保存（説明文）
   const handleSaveDescription = async (id: number, value: string) => {
     const img = images.find((i) => i.id === id);
     if (!img || img.description === value) return;
-    await api.put(`/images/${id}`, { description: value });
-    setImages((prev) => prev.map((i) => (i.id === id ? { ...i, description: value } : i)));
-    toast.show('保存しました');
+    try {
+      await api.put(`/images/${id}`, { description: value });
+      setImages((prev) => prev.map((i) => (i.id === id ? { ...i, description: value } : i)));
+      toast.show('保存しました');
+    } catch {
+      toast.show('保存に失敗しました');
+    }
   };
 
   // 画像タグ保存
   const handleSaveImageTags = async (id: number, tags: string[]) => {
-    await api.put(`/images/${id}`, { tags });
-    setImages((prev) => prev.map((i) => (i.id === id ? { ...i, tags } : i)));
-    toast.show('タグを更新しました');
+    try {
+      await api.put(`/images/${id}`, { tags });
+      setImages((prev) => prev.map((i) => (i.id === id ? { ...i, tags } : i)));
+      toast.show('タグを更新しました');
+    } catch {
+      toast.show('タグの保存に失敗しました');
+    }
   };
 
   // グループタグ保存
   const handleSaveGroupTags = async (tags: string[]) => {
     if (!group) return;
-    await api.put(`/groups/${groupId}`, { tags });
-    setGroup({ ...group, tags });
-    toast.show('グループタグを更新しました');
+    try {
+      await api.put(`/groups/${groupId}`, { tags });
+      setGroup({ ...group, tags });
+      toast.show('グループタグを更新しました');
+    } catch {
+      toast.show('グループタグの保存に失敗しました');
+    }
   };
 
   const copyToClipboard = (text: string, label: string) => {

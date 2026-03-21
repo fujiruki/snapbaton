@@ -30,7 +30,7 @@ const api = {
 
   put<T>(path: string, body: unknown): Promise<T> {
     return this.request<T>(path, {
-      method: 'PUT',
+      method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     });

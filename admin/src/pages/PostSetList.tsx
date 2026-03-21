@@ -49,11 +49,15 @@ export function PostSetList() {
 
   const handleStatusToggle = async (ps: PostSet) => {
     const newStatus = ps.status === 'draft' ? 'posted' : 'draft';
-    await api.put(`/post-sets/${ps.id}`, { status: newStatus });
-    setPostSets((prev) =>
-      prev.map((p) => (p.id === ps.id ? { ...p, status: newStatus } : p))
-    );
-    toast.show(newStatus === 'posted' ? '投稿済みにしました' : '下書きに戻しました');
+    try {
+      await api.put(`/post-sets/${ps.id}`, { status: newStatus });
+      setPostSets((prev) =>
+        prev.map((p) => (p.id === ps.id ? { ...p, status: newStatus } : p))
+      );
+      toast.show(newStatus === 'posted' ? '投稿済みにしました' : '下書きに戻しました');
+    } catch {
+      toast.show('ステータス変更に失敗しました');
+    }
   };
 
   const copyBody = (body: string) => {

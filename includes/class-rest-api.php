@@ -32,7 +32,7 @@ class RestApi {
 				'permission_callback' => [ Permissions::class, 'can_view' ],
 			],
 			[
-				'methods'             => 'PUT',
+				'methods'             => 'PUT, POST',
 				'callback'            => [ self::class, 'update_group' ],
 				'permission_callback' => [ Permissions::class, 'can_edit' ],
 			],
@@ -64,7 +64,7 @@ class RestApi {
 				'permission_callback' => [ Permissions::class, 'can_view' ],
 			],
 			[
-				'methods'             => 'PUT',
+				'methods'             => 'PUT, POST',
 				'callback'            => [ self::class, 'update_image' ],
 				'permission_callback' => [ Permissions::class, 'can_edit' ],
 			],
@@ -96,7 +96,7 @@ class RestApi {
 				'permission_callback' => [ Permissions::class, 'can_view' ],
 			],
 			[
-				'methods'             => 'PUT',
+				'methods'             => 'PUT, POST',
 				'callback'            => [ self::class, 'update_post_set' ],
 				'permission_callback' => [ Permissions::class, 'can_edit' ],
 			],
