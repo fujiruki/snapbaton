@@ -22,19 +22,25 @@ WordPress ギャラリー & SNSワークフロープラグイン。
 | ファイル | 内容 |
 |:--|:--|
 | `snapbaton.php` | メインプラグインファイル。WPヘッダー、フック登録、`big_image_size_threshold` 無効化 |
-| `includes/class-activator.php` | DB6テーブル作成（groups, tags, group_tags, images, post_sets, post_set_images） |
+| `includes/class-activator.php` | DB7テーブル作成（groups, tags, group_tags, images, image_tags, post_sets, post_set_images） |
 | `includes/class-admin.php` | WP管理画面メニュー登録（5ページ）、Reactアプリマウント、アセット読み込み |
 | `includes/class-rest-api.php` | 全REST APIエンドポイント（Groups/Images/PostSets/Tags/Share の CRUD） |
 | `includes/class-permissions.php` | WPロールベースの権限管理（manage/edit/upload/delete/view） |
+| `includes/class-public-upload.php` | スマホ公開アップロードページ（パスコード認証、グループ選択、ファイルアップロード） |
+| `includes/class-gallery.php` | 公開ギャラリー（`[snapbaton_gallery]` ショートコード、マソンリー、ライトボックス、タグフィルタ） |
 
 #### React（管理画面UI）
 | ファイル | 内容 |
 |:--|:--|
-| `admin/src/api.ts` | WP REST APIクライアント（nonce認証付き） |
+| `admin/src/api.ts` | WP REST APIクライアント（POST方式、nonce認証付き） |
 | `admin/src/App.tsx` | ルーティング（groups / group-detail / post-sets） |
-| `admin/src/pages/GroupList.tsx` | グループ一覧（グリッド/リスト切替、新規作成） |
-| `admin/src/pages/GroupDetail.tsx` | グループ詳細（画像アップロード、タイトル・説明文インライン編集、クリップボードコピー、オリジナルDL） |
+| `admin/src/pages/GroupList.tsx` | グループ一覧（グリッド/リスト切替、新規作成、スマホアップロード情報パネル） |
+| `admin/src/pages/GroupDetail.tsx` | グループ詳細（D&Dアップロード、インライン自動保存、タグ、公開トグル、クリア履歴） |
 | `admin/src/pages/PostSetList.tsx` | 投稿セット一覧（作成、SNS選択、ステータス管理、投稿文コピー） |
+| `admin/src/components/TagInput.tsx` | タグ入力コンポーネント（最近のタグ10件、コンボボックス検索、新規作成） |
+| `admin/src/components/Toast.tsx` | トースト通知 |
+| `admin/src/hooks/useToast.ts` | トースト管理フック |
+| `admin/src/styles.css` | 管理画面CSS |
 
 ### 未実装（GitHub Issues参照）
 | Issue | 内容 |
