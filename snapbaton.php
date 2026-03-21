@@ -27,6 +27,7 @@ require_once SNAPBATON_PLUGIN_DIR . 'includes/class-activator.php';
 require_once SNAPBATON_PLUGIN_DIR . 'includes/class-admin.php';
 require_once SNAPBATON_PLUGIN_DIR . 'includes/class-rest-api.php';
 require_once SNAPBATON_PLUGIN_DIR . 'includes/class-permissions.php';
+require_once SNAPBATON_PLUGIN_DIR . 'includes/class-public-upload.php';
 
 register_activation_hook( __FILE__, [ SnapBaton\Activator::class, 'activate' ] );
 register_deactivation_hook( __FILE__, [ SnapBaton\Activator::class, 'deactivate' ] );
@@ -34,5 +35,6 @@ register_deactivation_hook( __FILE__, [ SnapBaton\Activator::class, 'deactivate'
 add_action( 'admin_menu', [ SnapBaton\Admin::class, 'register_menu' ] );
 add_action( 'admin_enqueue_scripts', [ SnapBaton\Admin::class, 'enqueue_assets' ] );
 add_action( 'rest_api_init', [ SnapBaton\RestApi::class, 'register_routes' ] );
+add_action( 'rest_api_init', [ SnapBaton\PublicUpload::class, 'register_routes' ] );
 
 add_filter( 'big_image_size_threshold', '__return_false' );

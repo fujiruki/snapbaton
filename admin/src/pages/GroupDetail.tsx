@@ -45,7 +45,7 @@ export function GroupDetail({ groupId, onBack }: Props) {
   }, [groupId]);
 
   const handleUpload = async (files: FileList) => {
-    const fileArray = Array.from(files).filter((f) => f.type.startsWith('image/'));
+    const fileArray = Array.from(files).filter((f) => f.type.startsWith('image/') || f.type.startsWith('video/'));
     if (fileArray.length === 0) return;
 
     setUploading(true);
@@ -195,7 +195,7 @@ export function GroupDetail({ groupId, onBack }: Props) {
           <input
             ref={fileRef}
             type="file"
-            accept="image/*"
+            accept="image/*,video/*"
             multiple
             style={{ display: 'none' }}
             onChange={(e) => e.target.files && handleUpload(e.target.files)}
