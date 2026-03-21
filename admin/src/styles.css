@@ -1,0 +1,337 @@
+/* SnapBaton Admin Styles */
+
+/* ===== Layout ===== */
+.sb-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+
+.sb-header h1 {
+  margin: 0;
+}
+
+.sb-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 12px 0 16px;
+  flex-wrap: wrap;
+}
+
+.sb-toolbar .button svg {
+  vertical-align: middle;
+  margin-right: 4px;
+}
+
+/* ===== Group Cards ===== */
+.sb-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 16px;
+}
+
+.sb-group-card {
+  background: #fff;
+  border: 1px solid #c3c4c7;
+  border-radius: 4px;
+  padding: 0;
+  cursor: pointer;
+  transition: box-shadow 0.15s, border-color 0.15s;
+  overflow: hidden;
+}
+
+.sb-group-card:hover {
+  border-color: #2271b1;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+.sb-group-card-thumb {
+  height: 140px;
+  background: #f0f0f1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.sb-group-card-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.sb-group-card-thumb .sb-no-thumb {
+  color: #a7aaad;
+  font-size: 13px;
+}
+
+.sb-group-card-body {
+  padding: 12px 16px;
+}
+
+.sb-group-card-body h3 {
+  margin: 0 0 4px;
+  font-size: 14px;
+}
+
+.sb-group-card-body p {
+  margin: 0;
+  color: #646970;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.sb-group-card-footer {
+  padding: 8px 16px;
+  border-top: 1px solid #f0f0f1;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  color: #a7aaad;
+}
+
+/* ===== Image Grid ===== */
+.sb-image-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+.sb-image-card {
+  background: #fff;
+  border: 1px solid #c3c4c7;
+  border-radius: 4px;
+  overflow: hidden;
+  transition: box-shadow 0.15s;
+}
+
+.sb-image-card:hover {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+.sb-image-card img {
+  width: 100%;
+  height: 180px;
+  object-fit: cover;
+  display: block;
+}
+
+.sb-image-card-body {
+  padding: 8px 12px;
+}
+
+.sb-image-card-body .sb-image-title {
+  font-weight: 600;
+  font-size: 13px;
+  margin: 0 0 2px;
+  cursor: pointer;
+}
+
+.sb-image-card-body .sb-image-desc {
+  font-size: 12px;
+  color: #646970;
+  margin: 0;
+  cursor: pointer;
+  line-height: 1.4;
+}
+
+.sb-image-card-actions {
+  padding: 6px 12px 10px;
+  display: flex;
+  gap: 4px;
+}
+
+.sb-image-card-actions .button {
+  padding: 0 6px;
+  min-height: 26px;
+  line-height: 24px;
+}
+
+/* ===== Upload Drop Zone ===== */
+.sb-dropzone {
+  border: 2px dashed #c3c4c7;
+  border-radius: 8px;
+  padding: 32px;
+  text-align: center;
+  color: #a7aaad;
+  margin-bottom: 16px;
+  transition: border-color 0.15s, background 0.15s;
+  cursor: pointer;
+}
+
+.sb-dropzone:hover,
+.sb-dropzone.sb-drag-over {
+  border-color: #2271b1;
+  background: #f0f6fc;
+  color: #2271b1;
+}
+
+.sb-dropzone svg {
+  display: block;
+  margin: 0 auto 8px;
+}
+
+.sb-dropzone.sb-uploading {
+  border-color: #dba617;
+  background: #fcf9e8;
+  color: #7c6b20;
+  cursor: default;
+}
+
+/* ===== Tags ===== */
+.sb-tags {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.sb-tag {
+  background: #e7f1fd;
+  color: #2271b1;
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* ===== Create Form ===== */
+.sb-create-form {
+  background: #fff;
+  border: 1px solid #c3c4c7;
+  border-radius: 4px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.sb-create-form input[type="text"],
+.sb-create-form textarea,
+.sb-create-form select {
+  width: 100%;
+  margin-top: 8px;
+}
+
+.sb-create-form input[type="text"]:first-child,
+.sb-create-form select:first-child {
+  margin-top: 0;
+}
+
+.sb-create-form .sb-form-actions {
+  margin-top: 12px;
+  display: flex;
+  gap: 8px;
+}
+
+/* ===== Toast ===== */
+.sb-toast {
+  position: fixed;
+  bottom: 40px;
+  right: 24px;
+  background: #1d2327;
+  color: #fff;
+  padding: 10px 20px;
+  border-radius: 4px;
+  font-size: 13px;
+  z-index: 100000;
+  animation: sb-toast-in 0.2s ease-out;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+}
+
+@keyframes sb-toast-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ===== Empty State ===== */
+.sb-empty {
+  text-align: center;
+  padding: 48px 24px;
+  color: #a7aaad;
+}
+
+.sb-empty svg {
+  display: block;
+  margin: 0 auto 12px;
+  opacity: 0.4;
+}
+
+.sb-empty p {
+  margin: 0;
+  font-size: 14px;
+}
+
+/* ===== Post Set Table ===== */
+.sb-sns-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.sb-sns-x           { background: #1d1d1b; color: #fff; }
+.sb-sns-instagram   { background: #e1306c; color: #fff; }
+.sb-sns-facebook    { background: #1877f2; color: #fff; }
+.sb-sns-note        { background: #41c9b4; color: #fff; }
+.sb-sns-other       { background: #646970; color: #fff; }
+
+.sb-status-badge {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.sb-status-draft  { background: #f0f0f1; color: #646970; }
+.sb-status-posted { background: #edfaef; color: #00a32a; }
+
+/* ===== Inline Edit ===== */
+.sb-inline-edit input,
+.sb-inline-edit textarea {
+  width: 100%;
+  font-size: 13px;
+}
+
+/* ===== Progress ===== */
+.sb-progress {
+  height: 4px;
+  background: #f0f0f1;
+  border-radius: 2px;
+  overflow: hidden;
+  margin-top: 8px;
+}
+
+.sb-progress-bar {
+  height: 100%;
+  background: #2271b1;
+  transition: width 0.3s;
+}
+
+/* ===== Loading ===== */
+.sb-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 48px;
+  color: #a7aaad;
+}
+
+.sb-spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid #f0f0f1;
+  border-top-color: #2271b1;
+  border-radius: 50%;
+  animation: sb-spin 0.6s linear infinite;
+  margin-right: 8px;
+}
+
+@keyframes sb-spin {
+  to { transform: rotate(360deg); }
+}

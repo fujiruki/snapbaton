@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
-import { Plus, Grid, List } from 'lucide-react';
+import { Plus, Grid, List, Image as ImageIcon } from 'lucide-react';
 import api from '../api';
 
 interface Group {
   id: number;
   name: string;
   description: string;
+  image_count: number;
+  cover_thumbnail: string | null;
   created_at: string;
 }
 
@@ -15,13 +17,17 @@ interface Props {
 
 export function GroupList({ onSelectGroup }: Props) {
   const [groups, setGroups] = useState<Group[]>([]);
+  const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [showCreate, setShowCreate] = useState(false);
   const [newName, setNewName] = useState('');
   const [newDesc, setNewDesc] = useState('');
 
   useEffect(() => {
-    api.get<Group[]>('/groups').then(setGroups);
+    api.get<Group[]>('/groups').then((data) => {
+      setGroups(data);
+      setLoading(false);
+    });
   }, []);
 
   const handleCreate = async () => {
@@ -30,65 +36,98 @@ export function GroupList({ onSelectGroup }: Props) {
       name: newName,
       description: newDesc,
     });
-    setGroups([{ id: result.id, name: newName, description: newDesc, created_at: new Date().toISOString() }, ...groups]);
+    setGroups([
+      {
+        id: result.id,
+        name: newName,
+        description: newDesc,
+        image_count: 0,
+        cover_thumbnail: null,
+        created_at: new Date().toISOString(),
+      },
+      ...groups,
+    ]);
     setNewName('');
     setNewDesc('');
     setShowCreate(false);
   };
 
+  if (loading) {
+    return (
+      <div className="sb-loading">
+        <div className="sb-spinner" />
+        読み込み中...
+      </div>
+    );
+  }
+
   return (
     <div className="wrap">
-      <h1 className="wp-heading-inline">SnapBaton</h1>
+      <div className="sb-header">
+        <h1 className="wp-heading-inline">SnapBaton</h1>
+      </div>
 
-      <div style={{ display: 'flex', gap: '8px', margin: '16px 0' }}>
+      <div className="sb-toolbar">
         {snapbatonData.canEdit && (
           <button className="button button-primary" onClick={() => setShowCreate(true)}>
-            <Plus size={16} /> New Group
+            <Plus size={16} /> 新しいグループ
           </button>
         )}
-        <button className="button" onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}>
+        <button
+          className="button"
+          onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}
+          title={viewMode === 'grid' ? 'リスト表示' : 'グリッド表示'}
+        >
           {viewMode === 'grid' ? <List size={16} /> : <Grid size={16} />}
         </button>
       </div>
 
       {showCreate && (
-        <div className="card" style={{ padding: '16px', marginBottom: '16px' }}>
+        <div className="sb-create-form">
           <input
             type="text"
             className="regular-text"
-            placeholder="Group name"
+            placeholder="グループ名"
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
+            autoFocus
           />
-          <br />
           <textarea
             className="large-text"
             rows={2}
-            placeholder="Description"
+            placeholder="説明（任意）"
             value={newDesc}
             onChange={(e) => setNewDesc(e.target.value)}
-            style={{ marginTop: '8px' }}
           />
-          <br />
-          <div style={{ marginTop: '8px', display: 'flex', gap: '8px' }}>
-            <button className="button button-primary" onClick={handleCreate}>Create</button>
-            <button className="button" onClick={() => setShowCreate(false)}>Cancel</button>
+          <div className="sb-form-actions">
+            <button className="button button-primary" onClick={handleCreate}>作成</button>
+            <button className="button" onClick={() => setShowCreate(false)}>キャンセル</button>
           </div>
         </div>
       )}
 
       {viewMode === 'grid' ? (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '16px' }}>
+        <div className="sb-grid">
           {groups.map((g) => (
-            <div
-              key={g.id}
-              className="card"
-              style={{ padding: '16px', cursor: 'pointer' }}
-              onClick={() => onSelectGroup(g.id)}
-            >
-              <h3 style={{ margin: '0 0 8px' }}>{g.name}</h3>
-              <p style={{ margin: 0, color: '#666' }}>{g.description || 'No description'}</p>
-              <small style={{ color: '#999' }}>{new Date(g.created_at).toLocaleDateString()}</small>
+            <div key={g.id} className="sb-group-card" onClick={() => onSelectGroup(g.id)}>
+              <div className="sb-group-card-thumb">
+                {g.cover_thumbnail ? (
+                  <img src={g.cover_thumbnail} alt={g.name} />
+                ) : (
+                  <span className="sb-no-thumb">
+                    <ImageIcon size={32} strokeWidth={1} />
+                  </span>
+                )}
+              </div>
+              <div className="sb-group-card-body">
+                <h3>{g.name}</h3>
+                <p>{g.description || '\u00A0'}</p>
+              </div>
+              <div className="sb-group-card-footer">
+                <span>{g.image_count ?? 0} 枚</span>
+                <span>{new Date(g.created_at).toLocaleDateString('ja-JP')}</span>
+              </div>
             </div>
           ))}
         </div>
@@ -96,9 +135,10 @@ export function GroupList({ onSelectGroup }: Props) {
         <table className="wp-list-table widefat fixed striped">
           <thead>
             <tr>
-              <th>Name</th>
-              <th>Description</th>
-              <th>Created</th>
+              <th>グループ名</th>
+              <th>説明</th>
+              <th style={{ width: '80px' }}>画像数</th>
+              <th style={{ width: '120px' }}>作成日</th>
             </tr>
           </thead>
           <tbody>
@@ -106,7 +146,8 @@ export function GroupList({ onSelectGroup }: Props) {
               <tr key={g.id} style={{ cursor: 'pointer' }} onClick={() => onSelectGroup(g.id)}>
                 <td><strong>{g.name}</strong></td>
                 <td>{g.description || '—'}</td>
-                <td>{new Date(g.created_at).toLocaleDateString()}</td>
+                <td>{g.image_count ?? 0} 枚</td>
+                <td>{new Date(g.created_at).toLocaleDateString('ja-JP')}</td>
               </tr>
             ))}
           </tbody>
@@ -114,9 +155,11 @@ export function GroupList({ onSelectGroup }: Props) {
       )}
 
       {groups.length === 0 && (
-        <p style={{ color: '#666', textAlign: 'center', padding: '40px' }}>
-          No groups yet. Create your first group to get started.
-        </p>
+        <div className="sb-empty">
+          <ImageIcon size={48} strokeWidth={1} />
+          <p>グループがまだありません。</p>
+          <p>「新しいグループ」から最初のグループを作成しましょう。</p>
+        </div>
       )}
     </div>
   );

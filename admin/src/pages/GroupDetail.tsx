@@ -1,6 +1,8 @@
-import { useEffect, useState, useRef } from 'react';
-import { ArrowLeft, Upload, Grid, List, Copy, Download } from 'lucide-react';
+import { useEffect, useState, useRef, DragEvent } from 'react';
+import { ArrowLeft, Upload, Grid, List, Copy, Download, Link, Image as ImageIcon } from 'lucide-react';
 import api from '../api';
+import { useToast } from '../hooks/useToast';
+import { Toast } from '../components/Toast';
 
 interface Group {
   id: number;
@@ -9,7 +11,7 @@ interface Group {
   tags: string[];
 }
 
-interface Image {
+interface ImageItem {
   id: number;
   title: string;
   description: string;
@@ -25,134 +27,196 @@ interface Props {
 
 export function GroupDetail({ groupId, onBack }: Props) {
   const [group, setGroup] = useState<Group | null>(null);
-  const [images, setImages] = useState<Image[]>([]);
+  const [images, setImages] = useState<ImageItem[]>([]);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [editingId, setEditingId] = useState<number | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [uploadCount, setUploadCount] = useState({ done: 0, total: 0 });
+  const [dragOver, setDragOver] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const toast = useToast();
 
   useEffect(() => {
     api.get<Group>(`/groups/${groupId}`).then(setGroup);
-    api.get<Image[]>(`/groups/${groupId}/images`).then(setImages);
+    api.get<ImageItem[]>(`/groups/${groupId}/images`).then(setImages);
   }, [groupId]);
 
   const handleUpload = async (files: FileList) => {
+    const fileArray = Array.from(files).filter((f) => f.type.startsWith('image/'));
+    if (fileArray.length === 0) return;
+
     setUploading(true);
-    for (const file of Array.from(files)) {
+    setUploadCount({ done: 0, total: fileArray.length });
+
+    for (let i = 0; i < fileArray.length; i++) {
       const result = await api.upload<{ id: number; attachment_id: number }>(
         `/groups/${groupId}/images`,
-        file
+        fileArray[i]!
       );
-      const newImage = await api.get<Image>(`/images/${result.id}`);
+      const newImage = await api.get<ImageItem>(`/images/${result.id}`);
       setImages((prev) => [...prev, newImage]);
+      setUploadCount({ done: i + 1, total: fileArray.length });
     }
+
     setUploading(false);
+    toast.show(`${fileArray.length}枚の画像をアップロードしました`);
+  };
+
+  const handleDrop = (e: DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+    if (e.dataTransfer.files.length > 0) {
+      handleUpload(e.dataTransfer.files);
+    }
   };
 
   const handleUpdateImage = async (id: number, data: { title?: string; description?: string }) => {
     await api.put(`/images/${id}`, data);
     setImages((prev) => prev.map((img) => (img.id === id ? { ...img, ...data } : img)));
     setEditingId(null);
+    toast.show('保存しました');
   };
 
-  const copyToClipboard = (text: string) => {
+  const copyToClipboard = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
+    toast.show(`${label}をコピーしました`);
   };
 
   const copyShareUrl = (imageId: number) => {
     const url = `${location.origin}/wp-json/snapbaton/v1/share/${imageId}`;
-    navigator.clipboard.writeText(url);
+    copyToClipboard(url, '共有URL');
   };
 
-  if (!group) return <p>Loading...</p>;
+  if (!group) {
+    return (
+      <div className="sb-loading">
+        <div className="sb-spinner" />
+        読み込み中...
+      </div>
+    );
+  }
 
   return (
     <div className="wrap">
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-        <button className="button" onClick={onBack}><ArrowLeft size={16} /></button>
+      <div className="sb-header">
+        <button className="button" onClick={onBack} title="グループ一覧に戻る">
+          <ArrowLeft size={16} />
+        </button>
         <h1 className="wp-heading-inline">{group.name}</h1>
       </div>
 
-      {group.description && <p style={{ color: '#666' }}>{group.description}</p>}
+      {group.description && (
+        <p style={{ color: '#646970', margin: '4px 0 0' }}>{group.description}</p>
+      )}
+
       {group.tags?.length > 0 && (
-        <div style={{ display: 'flex', gap: '4px', marginBottom: '12px' }}>
+        <div className="sb-tags" style={{ marginTop: '8px' }}>
           {group.tags.map((tag) => (
-            <span key={tag} style={{ background: '#e0e0e0', padding: '2px 8px', borderRadius: '12px', fontSize: '12px' }}>
-              {tag}
-            </span>
+            <span key={tag} className="sb-tag">{tag}</span>
           ))}
         </div>
       )}
 
-      <div style={{ display: 'flex', gap: '8px', margin: '16px 0' }}>
-        {snapbatonData.canEdit && (
-          <>
-            <input
-              ref={fileRef}
-              type="file"
-              accept="image/*"
-              multiple
-              style={{ display: 'none' }}
-              onChange={(e) => e.target.files && handleUpload(e.target.files)}
-            />
-            <button
-              className="button button-primary"
-              onClick={() => fileRef.current?.click()}
-              disabled={uploading}
-            >
-              <Upload size={16} /> {uploading ? 'Uploading...' : 'Upload Images'}
-            </button>
-          </>
-        )}
-        <button className="button" onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}>
+      <div className="sb-toolbar">
+        <button
+          className="button"
+          onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}
+          title={viewMode === 'grid' ? 'リスト表示' : 'グリッド表示'}
+        >
           {viewMode === 'grid' ? <List size={16} /> : <Grid size={16} />}
         </button>
+        <span style={{ color: '#a7aaad', fontSize: '13px' }}>
+          {images.length} 枚
+        </span>
       </div>
 
+      {snapbatonData.canEdit && (
+        <>
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/*"
+            multiple
+            style={{ display: 'none' }}
+            onChange={(e) => e.target.files && handleUpload(e.target.files)}
+          />
+          <div
+            className={`sb-dropzone${dragOver ? ' sb-drag-over' : ''}${uploading ? ' sb-uploading' : ''}`}
+            onClick={() => !uploading && fileRef.current?.click()}
+            onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+            onDragLeave={() => setDragOver(false)}
+            onDrop={handleDrop}
+          >
+            <Upload size={28} strokeWidth={1.5} />
+            {uploading ? (
+              <>
+                アップロード中... ({uploadCount.done} / {uploadCount.total})
+                <div className="sb-progress">
+                  <div
+                    className="sb-progress-bar"
+                    style={{ width: `${(uploadCount.done / uploadCount.total) * 100}%` }}
+                  />
+                </div>
+              </>
+            ) : (
+              <>ここに画像をドラッグ&ドロップ、またはクリックして選択</>
+            )}
+          </div>
+        </>
+      )}
+
       {viewMode === 'grid' ? (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '16px' }}>
+        <div className="sb-image-grid">
           {images.map((img) => (
-            <div key={img.id} className="card" style={{ padding: '8px' }}>
-              <img
-                src={img.thumbnail}
-                alt={img.title}
-                style={{ width: '100%', height: '160px', objectFit: 'cover', borderRadius: '4px' }}
-              />
-              {editingId === img.id ? (
-                <div style={{ marginTop: '8px' }}>
-                  <input
-                    type="text"
-                    defaultValue={img.title}
-                    placeholder="Title"
-                    className="regular-text"
-                    style={{ width: '100%' }}
-                    onBlur={(e) => handleUpdateImage(img.id, { title: e.target.value })}
-                  />
-                  <textarea
-                    defaultValue={img.description}
-                    placeholder="Description"
-                    className="large-text"
-                    rows={2}
-                    style={{ width: '100%', marginTop: '4px' }}
-                    onBlur={(e) => handleUpdateImage(img.id, { description: e.target.value })}
-                  />
-                </div>
-              ) : (
-                <div style={{ marginTop: '8px', cursor: 'pointer' }} onClick={() => setEditingId(img.id)}>
-                  <strong>{img.title || 'Untitled'}</strong>
-                  <p style={{ margin: '4px 0 0', fontSize: '12px', color: '#666' }}>
-                    {img.description || 'Click to add description'}
-                  </p>
-                </div>
-              )}
-              <div style={{ display: 'flex', gap: '4px', marginTop: '8px' }}>
-                <button className="button button-small" onClick={() => copyToClipboard(img.description)} title="Copy description">
+            <div key={img.id} className="sb-image-card">
+              <img src={img.thumbnail || img.url} alt={img.title} />
+              <div className="sb-image-card-body">
+                {editingId === img.id ? (
+                  <div className="sb-inline-edit">
+                    <input
+                      type="text"
+                      defaultValue={img.title}
+                      placeholder="タイトル"
+                      autoFocus
+                      onBlur={(e) => handleUpdateImage(img.id, { title: e.target.value })}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+                        if (e.key === 'Escape') setEditingId(null);
+                      }}
+                    />
+                    <textarea
+                      defaultValue={img.description}
+                      placeholder="説明文"
+                      rows={2}
+                      style={{ marginTop: '4px' }}
+                      onBlur={(e) => handleUpdateImage(img.id, { description: e.target.value })}
+                    />
+                  </div>
+                ) : (
+                  <div onClick={() => snapbatonData.canEdit && setEditingId(img.id)}>
+                    <p className="sb-image-title">{img.title || '無題'}</p>
+                    <p className="sb-image-desc">
+                      {img.description || (snapbatonData.canEdit ? 'クリックして説明を追加' : '')}
+                    </p>
+                  </div>
+                )}
+              </div>
+              <div className="sb-image-card-actions">
+                <button
+                  className="button button-small"
+                  onClick={() => copyToClipboard(img.description || '', '説明文')}
+                  title="説明文をコピー"
+                >
                   <Copy size={12} />
                 </button>
-                <button className="button button-small" onClick={() => copyShareUrl(img.id)} title="Copy share URL">
-                  URL
+                <button
+                  className="button button-small"
+                  onClick={() => copyShareUrl(img.id)}
+                  title="共有URLをコピー"
+                >
+                  <Link size={12} />
                 </button>
-                <a href={img.url} download className="button button-small" title="Download original">
+                <a href={img.url} download className="button button-small" title="オリジナルをダウンロード">
                   <Download size={12} />
                 </a>
               </div>
@@ -163,41 +227,59 @@ export function GroupDetail({ groupId, onBack }: Props) {
         <table className="wp-list-table widefat fixed striped">
           <thead>
             <tr>
-              <th style={{ width: '80px' }}>Image</th>
-              <th>Title</th>
-              <th>Description</th>
-              <th style={{ width: '120px' }}>Actions</th>
+              <th style={{ width: '80px' }}>画像</th>
+              <th>タイトル</th>
+              <th>説明文</th>
+              <th style={{ width: '140px' }}>操作</th>
             </tr>
           </thead>
           <tbody>
             {images.map((img) => (
               <tr key={img.id}>
                 <td>
-                  <img src={img.thumbnail} alt={img.title} style={{ width: '60px', height: '60px', objectFit: 'cover' }} />
+                  <img
+                    src={img.thumbnail || img.url}
+                    alt={img.title}
+                    style={{ width: '60px', height: '60px', objectFit: 'cover', borderRadius: '2px' }}
+                  />
                 </td>
                 <td>
                   <input
                     type="text"
                     defaultValue={img.title}
+                    placeholder="タイトル"
                     className="regular-text"
+                    style={{ width: '100%' }}
                     onBlur={(e) => handleUpdateImage(img.id, { title: e.target.value })}
                   />
                 </td>
                 <td>
                   <textarea
                     defaultValue={img.description}
+                    placeholder="説明文"
                     className="large-text"
                     rows={2}
+                    style={{ width: '100%' }}
                     onBlur={(e) => handleUpdateImage(img.id, { description: e.target.value })}
                   />
                 </td>
                 <td>
                   <div style={{ display: 'flex', gap: '4px' }}>
-                    <button className="button button-small" onClick={() => copyToClipboard(img.description)}>
+                    <button
+                      className="button button-small"
+                      onClick={() => copyToClipboard(img.description || '', '説明文')}
+                      title="説明文をコピー"
+                    >
                       <Copy size={12} />
                     </button>
-                    <button className="button button-small" onClick={() => copyShareUrl(img.id)}>URL</button>
-                    <a href={img.url} download className="button button-small">
+                    <button
+                      className="button button-small"
+                      onClick={() => copyShareUrl(img.id)}
+                      title="共有URL"
+                    >
+                      <Link size={12} />
+                    </button>
+                    <a href={img.url} download className="button button-small" title="DL">
                       <Download size={12} />
                     </a>
                   </div>
@@ -208,11 +290,15 @@ export function GroupDetail({ groupId, onBack }: Props) {
         </table>
       )}
 
-      {images.length === 0 && (
-        <p style={{ color: '#666', textAlign: 'center', padding: '40px' }}>
-          No images yet. Upload your first photos.
-        </p>
+      {images.length === 0 && !uploading && (
+        <div className="sb-empty">
+          <ImageIcon size={48} strokeWidth={1} />
+          <p>まだ画像がありません。</p>
+          <p>上のエリアに画像をドラッグ&ドロップしてアップロードしましょう。</p>
+        </div>
       )}
+
+      <Toast message={toast.message} />
     </div>
   );
 }

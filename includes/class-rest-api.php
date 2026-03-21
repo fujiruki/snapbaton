@@ -129,8 +129,21 @@ class RestApi {
 		$prefix = $wpdb->prefix . 'snapbaton_';
 
 		$groups = $wpdb->get_results(
-			"SELECT * FROM {$prefix}groups WHERE deleted_at IS NULL ORDER BY created_at DESC"
+			"SELECT g.*,
+				(SELECT COUNT(*) FROM {$prefix}images i WHERE i.group_id = g.id AND i.deleted_at IS NULL) AS image_count,
+				(SELECT i.attachment_id FROM {$prefix}images i WHERE i.group_id = g.id AND i.deleted_at IS NULL ORDER BY i.sort_order ASC LIMIT 1) AS cover_attachment_id
+			 FROM {$prefix}groups g
+			 WHERE g.deleted_at IS NULL
+			 ORDER BY g.created_at DESC"
 		);
+
+		foreach ( $groups as &$group ) {
+			$group->image_count     = (int) $group->image_count;
+			$group->cover_thumbnail = $group->cover_attachment_id
+				? wp_get_attachment_image_url( $group->cover_attachment_id, 'medium' )
+				: null;
+			unset( $group->cover_attachment_id );
+		}
 
 		return rest_ensure_response( $groups );
 	}

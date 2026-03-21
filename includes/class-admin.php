@@ -75,9 +75,10 @@ class Admin {
 			return;
 		}
 
+		$css_file = file_exists( $build_dir . 'assets/main.css' ) ? 'main.css' : 'index.css';
 		wp_enqueue_style(
 			'snapbaton-admin',
-			$build_url . 'assets/index.css',
+			$build_url . 'assets/' . $css_file,
 			[],
 			SNAPBATON_VERSION
 		);
