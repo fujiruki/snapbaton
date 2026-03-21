@@ -339,6 +339,13 @@
   font-size: 12px;
 }
 
+/* ===== Public Toggle ===== */
+.sb-btn-public-on {
+  background: #00a32a !important;
+  color: #fff !important;
+  border-color: #00a32a !important;
+}
+
 /* ===== Upload Info Panel ===== */
 .sb-upload-info {
   background: #f0f6fc;

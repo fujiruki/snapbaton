@@ -213,6 +213,9 @@ class RestApi {
 		if ( $request->has_param( 'description' ) ) {
 			$data['description'] = sanitize_textarea_field( $request->get_param( 'description' ) );
 		}
+		if ( $request->has_param( 'is_public' ) ) {
+			$data['is_public'] = $request->get_param( 'is_public' ) ? 1 : 0;
+		}
 
 		if ( ! empty( $data ) ) {
 			$data['updated_at'] = current_time( 'mysql' );

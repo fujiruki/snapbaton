@@ -32,9 +32,11 @@ class Activator {
 			created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			updated_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			deleted_at datetime DEFAULT NULL,
+			is_public tinyint(1) NOT NULL DEFAULT 0,
 			PRIMARY KEY  (id),
 			KEY author_id (author_id),
-			KEY deleted_at (deleted_at)
+			KEY deleted_at (deleted_at),
+			KEY is_public (is_public)
 		) {$charset_collate};
 
 		CREATE TABLE {$prefix}tags (

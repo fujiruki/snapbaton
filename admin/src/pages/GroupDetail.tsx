@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef, DragEvent } from 'react';
-import { ArrowLeft, Upload, Grid, List, Copy, Download, Link, Image as ImageIcon, Tag, Eraser } from 'lucide-react';
+import { ArrowLeft, Upload, Grid, List, Copy, Download, Link, Image as ImageIcon, Tag, Eraser, Globe } from 'lucide-react';
 import api from '../api';
 import { useToast } from '../hooks/useToast';
 import { Toast } from '../components/Toast';
@@ -10,6 +10,7 @@ interface Group {
   name: string;
   description: string;
   tags: string[];
+  is_public: number;
 }
 
 interface ImageItem {
@@ -110,6 +111,19 @@ export function GroupDetail({ groupId, onBack }: Props) {
     }
   };
 
+  // 公開トグル
+  const handleTogglePublic = async () => {
+    if (!group) return;
+    const newVal = group.is_public ? 0 : 1;
+    try {
+      await api.put(`/groups/${groupId}`, { is_public: newVal });
+      setGroup({ ...group, is_public: newVal });
+      toast.show(newVal ? 'ギャラリーに公開しました' : '非公開にしました');
+    } catch {
+      toast.show('変更に失敗しました');
+    }
+  };
+
   // グループタグ保存
   const handleSaveGroupTags = async (tags: string[]) => {
     if (!group) return;
@@ -189,13 +203,23 @@ export function GroupDetail({ groupId, onBack }: Props) {
           </div>
         )}
         {snapbatonData.canEdit && (
-          <button
-            className="button button-small"
-            onClick={() => setShowGroupTags(!showGroupTags)}
-            style={{ fontSize: '12px' }}
-          >
-            <Tag size={12} /> {showGroupTags ? 'タグを閉じる' : 'グループタグを編集'}
-          </button>
+          <>
+            <button
+              className="button button-small"
+              onClick={() => setShowGroupTags(!showGroupTags)}
+              style={{ fontSize: '12px' }}
+            >
+              <Tag size={12} /> {showGroupTags ? 'タグを閉じる' : 'グループタグを編集'}
+            </button>
+            <button
+              className={`button button-small${group.is_public ? ' sb-btn-public-on' : ''}`}
+              onClick={handleTogglePublic}
+              style={{ fontSize: '12px', marginLeft: '4px' }}
+              title={group.is_public ? '公開ギャラリーに表示中' : '非公開'}
+            >
+              <Globe size={12} /> {group.is_public ? '公開中' : '非公開'}
+            </button>
+          </>
         )}
         {showGroupTags && (
           <TagInput tags={group.tags ?? []} onChange={handleSaveGroupTags} />
