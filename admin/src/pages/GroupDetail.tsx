@@ -4,6 +4,7 @@ import api from '../api';
 import { useToast } from '../hooks/useToast';
 import { Toast } from '../components/Toast';
 import { TagInput } from '../components/TagInput';
+import { ImageEditorLightbox, type ImageEditorSaveResult } from '@fujiruki/react-image-editor-lightbox';
 
 interface Group {
   id: number;
@@ -21,6 +22,7 @@ interface ImageItem {
   thumbnail: string;
   sort_order: number;
   tags: string[];
+  attachment_id: number;
 }
 
 interface Props {
@@ -37,6 +39,7 @@ export function GroupDetail({ groupId, onBack }: Props) {
   const [dragOver, setDragOver] = useState(false);
   const [showGroupTags, setShowGroupTags] = useState(false);
   const [expandedTagId, setExpandedTagId] = useState<number | null>(null);
+  const [editorImage, setEditorImage] = useState<{ id: number; url: string; attachmentId: number } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const toast = useToast();
 
@@ -134,6 +137,38 @@ export function GroupDetail({ groupId, onBack }: Props) {
     } catch {
       toast.show('グループタグの保存に失敗しました');
     }
+  };
+
+  // エディタで保存（WPメディアに上書き）
+  const handleEditorSave = async (result: ImageEditorSaveResult) => {
+    if (!editorImage) return;
+    const file = new File([result.annotatedBlob], 'edited.jpg', { type: 'image/jpeg' });
+    const formData = new FormData();
+    formData.append('file', file);
+    try {
+      const res = await fetch(
+        `${snapbatonData.apiBase.replace('/snapbaton/v1', '')}/wp/v2/media/${editorImage.attachmentId}`,
+        {
+          method: 'POST',
+          headers: { 'X-WP-Nonce': snapbatonData.nonce },
+          body: formData,
+        }
+      );
+      if (res.ok) {
+        const data = await res.json();
+        setImages((prev) => prev.map((i) =>
+          i.id === editorImage.id
+            ? { ...i, url: data.source_url + '?t=' + Date.now(), thumbnail: (data.media_details?.sizes?.medium?.source_url || data.source_url) + '?t=' + Date.now() }
+            : i
+        ));
+        toast.show('画像を保存しました');
+      } else {
+        toast.show('画像の保存に失敗しました');
+      }
+    } catch {
+      toast.show('画像の保存に失敗しました');
+    }
+    setEditorImage(null);
   };
 
   // ゴミ箱へ移動
@@ -289,7 +324,12 @@ export function GroupDetail({ groupId, onBack }: Props) {
         <div className="sb-image-grid">
           {images.map((img) => (
             <div key={`${img.id}-${img.title}-${img.description}`} className="sb-image-card">
-              <img src={img.thumbnail || img.url} alt={img.title} />
+              <img
+                src={img.thumbnail || img.url}
+                alt={img.title}
+                style={{ cursor: 'pointer' }}
+                onClick={() => setEditorImage({ id: img.id, url: img.url, attachmentId: img.attachment_id })}
+              />
               <div className="sb-image-card-body">
                 <input
                   type="text"
@@ -493,6 +533,15 @@ export function GroupDetail({ groupId, onBack }: Props) {
       )}
 
       <Toast message={toast.message} />
+
+      {editorImage && (
+        <ImageEditorLightbox
+          isOpen={true}
+          imageUrl={editorImage.url}
+          onSave={handleEditorSave}
+          onClose={() => setEditorImage(null)}
+        />
+      )}
     </div>
   );
 }
