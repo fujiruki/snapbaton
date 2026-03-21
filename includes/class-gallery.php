@@ -175,13 +175,15 @@ class Gallery {
 			<button class="sb-lb-close">&times;</button>
 			<button class="sb-lb-prev">&lsaquo;</button>
 			<button class="sb-lb-next">&rsaquo;</button>
-			<div class="sb-lb-content">
-				<img class="sb-lb-img" src="" alt="">
-				<video class="sb-lb-video" src="" controls style="display:none"></video>
-			</div>
-			<div class="sb-lb-info">
-				<h4 class="sb-lb-title"></h4>
-				<p class="sb-lb-desc"></p>
+			<div class="sb-lb-scroll">
+				<div class="sb-lb-content">
+					<img class="sb-lb-img" src="" alt="">
+					<video class="sb-lb-video" src="" controls style="display:none"></video>
+				</div>
+				<div class="sb-lb-info">
+					<h4 class="sb-lb-title"></h4>
+					<p class="sb-lb-desc"></p>
+				</div>
 			</div>
 		</div>
 
@@ -215,20 +217,23 @@ class Gallery {
 		.sb-gallery-contact-btn{display:inline-block;background:#1d1d1f;color:#fff;padding:14px 32px;border-radius:8px;text-decoration:none;font-size:15px;font-weight:600;transition:opacity .15s}
 		.sb-gallery-contact-btn:hover{opacity:.8;color:#fff}
 		/* ライトボックス */
-		.sb-lightbox{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:999999;display:flex;flex-direction:column;align-items:center;justify-content:center}
-		.sb-lb-close{position:absolute;top:16px;right:20px;background:none;border:none;color:#fff;font-size:36px;cursor:pointer;z-index:10;line-height:1}
-		.sb-lb-prev,.sb-lb-next{position:absolute;top:50%;transform:translateY(-50%);background:rgba(255,255,255,.15);border:none;color:#fff;font-size:32px;cursor:pointer;width:48px;height:48px;border-radius:50%;z-index:10}
-		.sb-lb-prev{left:16px}
-		.sb-lb-next{right:16px}
-		.sb-lb-prev:hover,.sb-lb-next:hover{background:rgba(255,255,255,.3)}
-		.sb-lb-content{max-width:90vw;max-height:75vh;display:flex;align-items:center;justify-content:center}
-		.sb-lb-img,.sb-lb-video{max-width:90vw;max-height:75vh;object-fit:contain;border-radius:4px}
-		.sb-lb-info{text-align:center;padding:12px 24px;max-width:600px}
-		.sb-lb-title{color:#fff;font-size:16px;margin:0 0 4px}
-		.sb-lb-desc{color:#aaa;font-size:13px;margin:0;line-height:1.5}
+		.sb-lightbox{position:fixed;inset:0;background:rgba(0,0,0,.95);z-index:999999;overflow-y:auto;-webkit-overflow-scrolling:touch}
+		.sb-lb-close{position:fixed;top:12px;right:16px;background:rgba(0,0,0,.5);border:none;color:#fff;font-size:32px;cursor:pointer;z-index:10;line-height:1;width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center}
+		.sb-lb-prev,.sb-lb-next{position:fixed;top:45%;transform:translateY(-50%);background:rgba(255,255,255,.12);border:none;color:#fff;font-size:28px;cursor:pointer;width:44px;height:44px;border-radius:50%;z-index:10}
+		.sb-lb-prev{left:12px}
+		.sb-lb-next{right:12px}
+		.sb-lb-prev:hover,.sb-lb-next:hover{background:rgba(255,255,255,.25)}
+		.sb-lb-scroll{display:flex;flex-direction:column;align-items:center;min-height:100vh;padding:20px 16px 60px}
+		.sb-lb-content{display:flex;align-items:center;justify-content:center;width:90vw;min-height:85vh}
+		.sb-lb-img,.sb-lb-video{max-width:90vw;max-height:85vh;object-fit:contain;border-radius:4px;display:block}
+		.sb-lb-info{text-align:center;padding:20px 24px 0;max-width:700px;width:100%}
+		.sb-lb-title{color:#fff;font-size:18px;font-weight:600;margin:0 0 8px;line-height:1.4}
+		.sb-lb-desc{color:#aaa;font-size:14px;margin:0;line-height:1.7;white-space:pre-wrap}
 		@media(max-width:768px){
 			.sb-gallery-grid{columns:2}
-			.sb-lb-prev,.sb-lb-next{width:36px;height:36px;font-size:24px}
+			.sb-lb-prev,.sb-lb-next{width:36px;height:36px;font-size:22px}
+			.sb-lb-content{width:96vw}
+			.sb-lb-img,.sb-lb-video{max-width:96vw}
 		}
 		@media(max-width:480px){
 			.sb-gallery-grid{columns:1}
@@ -299,7 +304,7 @@ class Gallery {
 			lb.querySelector('.sb-lb-close').addEventListener('click',hide);
 			lb.querySelector('.sb-lb-prev').addEventListener('click',prev);
 			lb.querySelector('.sb-lb-next').addEventListener('click',next);
-			lb.addEventListener('click',function(e){if(e.target===lb)hide()});
+			lb.addEventListener('click',function(e){if(e.target===lb||e.target.classList.contains('sb-lb-scroll'))hide()});
 			document.addEventListener('keydown',function(e){
 				if(lb.style.display==='none')return;
 				if(e.key==='Escape')hide();

@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef, DragEvent } from 'react';
-import { ArrowLeft, Upload, Grid, List, Copy, Download, Link, Image as ImageIcon, Tag, Eraser, Globe } from 'lucide-react';
+import { ArrowLeft, Upload, Grid, List, Copy, Download, Link, Image as ImageIcon, Tag, Eraser, Globe, Trash2 } from 'lucide-react';
 import api from '../api';
 import { useToast } from '../hooks/useToast';
 import { Toast } from '../components/Toast';
@@ -133,6 +133,17 @@ export function GroupDetail({ groupId, onBack }: Props) {
       toast.show('グループタグを更新しました');
     } catch {
       toast.show('グループタグの保存に失敗しました');
+    }
+  };
+
+  // ゴミ箱へ移動
+  const handleTrashImage = async (id: number) => {
+    try {
+      await api.post(`/images/${id}/trash`, {});
+      setImages((prev) => prev.filter((i) => i.id !== id));
+      toast.show('ゴミ箱に移動しました');
+    } catch {
+      toast.show('削除に失敗しました');
     }
   };
 
@@ -348,6 +359,16 @@ export function GroupDetail({ groupId, onBack }: Props) {
                 <a href={img.url} download className="button button-small" title="オリジナルをダウンロード">
                   <Download size={12} />
                 </a>
+                {snapbatonData.canDelete && (
+                  <button
+                    className="button button-small"
+                    onClick={() => handleTrashImage(img.id)}
+                    title="ゴミ箱へ移動"
+                    style={{ color: '#d63638' }}
+                  >
+                    <Trash2 size={12} />
+                  </button>
+                )}
               </div>
             </div>
           ))}
@@ -445,6 +466,16 @@ export function GroupDetail({ groupId, onBack }: Props) {
                     <a href={img.url} download className="button button-small" title="DL">
                       <Download size={12} />
                     </a>
+                    {snapbatonData.canDelete && (
+                      <button
+                        className="button button-small"
+                        onClick={() => handleTrashImage(img.id)}
+                        title="ゴミ箱"
+                        style={{ color: '#d63638' }}
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    )}
                   </div>
                 </td>
               </tr>

@@ -2,18 +2,22 @@ import { useState } from 'react';
 import { GroupList } from './pages/GroupList';
 import { GroupDetail } from './pages/GroupDetail';
 import { PostSetList } from './pages/PostSetList';
+import { TrashList } from './pages/TrashList';
 
 type Page =
   | { name: 'groups' }
   | { name: 'group-detail'; groupId: number }
-  | { name: 'post-sets' };
+  | { name: 'post-sets' }
+  | { name: 'trash' };
 
 export function App() {
   const initialPage = snapbatonData.page;
   const [page, setPage] = useState<Page>(
     initialPage === 'snapbaton-post-sets'
       ? { name: 'post-sets' }
-      : { name: 'groups' }
+      : initialPage === 'snapbaton-trash'
+        ? { name: 'trash' }
+        : { name: 'groups' }
   );
 
   switch (page.name) {
@@ -32,5 +36,7 @@ export function App() {
       );
     case 'post-sets':
       return <PostSetList />;
+    case 'trash':
+      return <TrashList />;
   }
 }

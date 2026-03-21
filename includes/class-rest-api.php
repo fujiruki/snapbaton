@@ -114,6 +114,32 @@ class RestApi {
 			'permission_callback' => '__return_true',
 		] );
 
+		// --- Soft Delete (POST対応) ---
+		register_rest_route( self::NAMESPACE, '/images/(?P<id>\d+)/trash', [
+			'methods'             => 'POST',
+			'callback'            => [ self::class, 'delete_image' ],
+			'permission_callback' => [ Permissions::class, 'can_delete' ],
+		] );
+
+		register_rest_route( self::NAMESPACE, '/groups/(?P<id>\d+)/trash', [
+			'methods'             => 'POST',
+			'callback'            => [ self::class, 'delete_group' ],
+			'permission_callback' => [ Permissions::class, 'can_delete' ],
+		] );
+
+		// --- Trash ---
+		register_rest_route( self::NAMESPACE, '/trash', [
+			'methods'             => 'GET',
+			'callback'            => [ self::class, 'get_trash' ],
+			'permission_callback' => [ Permissions::class, 'can_delete' ],
+		] );
+
+		register_rest_route( self::NAMESPACE, '/trash/restore/(?P<type>image|group)/(?P<id>\d+)', [
+			'methods'             => 'POST',
+			'callback'            => [ self::class, 'restore_item' ],
+			'permission_callback' => [ Permissions::class, 'can_delete' ],
+		] );
+
 		// --- Tags ---
 		register_rest_route( self::NAMESPACE, '/tags', [
 			'methods'             => 'GET',
@@ -569,6 +595,59 @@ class RestApi {
 				'tag_id'   => $tag_id,
 			] );
 		}
+	}
+
+	// --- Trash ---
+
+	public static function get_trash( \WP_REST_Request $request ): \WP_REST_Response {
+		global $wpdb;
+		$prefix = $wpdb->prefix . 'snapbaton_';
+
+		$images = $wpdb->get_results(
+			"SELECT i.*, g.name AS group_name FROM {$prefix}images i
+			 LEFT JOIN {$prefix}groups g ON i.group_id = g.id
+			 WHERE i.deleted_at IS NOT NULL
+			 ORDER BY i.deleted_at DESC"
+		);
+		foreach ( $images as &$img ) {
+			$img->url       = wp_get_attachment_url( $img->attachment_id );
+			$img->thumbnail = wp_get_attachment_image_url( $img->attachment_id, 'medium' );
+			$img->type      = 'image';
+		}
+
+		$groups = $wpdb->get_results(
+			"SELECT * FROM {$prefix}groups WHERE deleted_at IS NOT NULL ORDER BY deleted_at DESC"
+		);
+		foreach ( $groups as &$g ) {
+			$g->type = 'group';
+		}
+
+		$items = array_merge( $images, $groups );
+		usort( $items, function( $a, $b ) {
+			return strcmp( $b->deleted_at, $a->deleted_at );
+		} );
+
+		return rest_ensure_response( $items );
+	}
+
+	public static function restore_item( \WP_REST_Request $request ): \WP_REST_Response|\WP_Error {
+		global $wpdb;
+		$prefix = $wpdb->prefix . 'snapbaton_';
+		$type   = $request['type'];
+		$id     = absint( $request['id'] );
+
+		if ( $type === 'image' ) {
+			$wpdb->update( "{$prefix}images", [ 'deleted_at' => null ], [ 'id' => $id ] );
+		} elseif ( $type === 'group' ) {
+			$wpdb->update( "{$prefix}groups", [ 'deleted_at' => null ], [ 'id' => $id ] );
+			// グループ内の画像も復元
+			$wpdb->query( $wpdb->prepare(
+				"UPDATE {$prefix}images SET deleted_at = NULL WHERE group_id = %d",
+				$id
+			) );
+		}
+
+		return rest_ensure_response( [ 'restored' => true ] );
 	}
 
 	public static function get_recent_tags( \WP_REST_Request $request ): \WP_REST_Response {
