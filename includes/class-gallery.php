@@ -236,7 +236,7 @@ class Gallery {
 			.sb-lb-img,.sb-lb-video{max-width:96vw}
 		}
 		@media(max-width:480px){
-			.sb-gallery-grid{columns:1}
+			.sb-gallery-grid{columns:2}
 		}
 		</style>
 		<?php
