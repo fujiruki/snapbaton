@@ -156,6 +156,9 @@ class Gallery {
 						data-desc="<?php echo esc_attr( $img->description ); ?>"
 						data-type="image">
 					<?php endif; ?>
+					<?php if ( $img->title ) : ?>
+					<div class="sb-gallery-item-title"><?php echo esc_html( $img->title ); ?></div>
+					<?php endif; ?>
 				</div>
 				<?php endforeach; ?>
 			<?php endforeach; ?>
@@ -207,6 +210,7 @@ class Gallery {
 		.sb-gallery-item{break-inside:avoid;margin-bottom:12px;border-radius:8px;overflow:hidden;cursor:pointer;position:relative}
 		.sb-gallery-item img,.sb-gallery-item video{width:100%;display:block;transition:transform .3s}
 		.sb-gallery-item:hover img,.sb-gallery-item:hover video{transform:scale(1.03)}
+		.sb-gallery-item-title{padding:6px 4px 2px;font-size:12px;color:#333;text-align:center;line-height:1.4;word-break:break-word}
 		.sb-gallery-item[style*="display: none"]{display:none!important}
 		.sb-gallery-group-header{column-span:all;padding:20px 0 8px;border-bottom:1px solid #e0e0e0;margin-bottom:16px}
 		.sb-gallery-group-header h3{font-size:20px;margin:0 0 4px;color:#1d1d1f}
