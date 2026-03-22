@@ -114,6 +114,13 @@ class RestApi {
 			'permission_callback' => '__return_true',
 		] );
 
+		// --- Image Replace (エディタ保存) ---
+		register_rest_route( self::NAMESPACE, '/images/(?P<id>\d+)/replace', [
+			'methods'             => 'POST',
+			'callback'            => [ self::class, 'replace_image' ],
+			'permission_callback' => [ Permissions::class, 'can_edit' ],
+		] );
+
 		// --- Soft Delete (POST対応) ---
 		register_rest_route( self::NAMESPACE, '/images/(?P<id>\d+)/trash', [
 			'methods'             => 'POST',
@@ -602,6 +609,48 @@ class RestApi {
 				'tag_id'   => $tag_id,
 			] );
 		}
+	}
+
+	// --- Image Replace ---
+
+	public static function replace_image( \WP_REST_Request $request ): \WP_REST_Response|\WP_Error {
+		$files = $request->get_file_params();
+		if ( empty( $files['file'] ) ) {
+			return new \WP_Error( 'no_file', 'No file uploaded.', [ 'status' => 400 ] );
+		}
+
+		require_once ABSPATH . 'wp-admin/includes/image.php';
+		require_once ABSPATH . 'wp-admin/includes/file.php';
+		require_once ABSPATH . 'wp-admin/includes/media.php';
+
+		$new_attachment_id = media_handle_upload( 'file', 0 );
+		if ( is_wp_error( $new_attachment_id ) ) {
+			return $new_attachment_id;
+		}
+
+		global $wpdb;
+		$prefix = $wpdb->prefix . 'snapbaton_';
+		$id     = absint( $request['id'] );
+
+		$old_attachment_id = $wpdb->get_var( $wpdb->prepare(
+			"SELECT attachment_id FROM {$prefix}images WHERE id = %d",
+			$id
+		) );
+
+		$wpdb->update( "{$prefix}images", [
+			'attachment_id' => $new_attachment_id,
+			'updated_at'    => current_time( 'mysql' ),
+		], [ 'id' => $id ] );
+
+		if ( $old_attachment_id ) {
+			wp_delete_attachment( (int) $old_attachment_id, true );
+		}
+
+		return rest_ensure_response( [
+			'id'        => $new_attachment_id,
+			'url'       => wp_get_attachment_url( $new_attachment_id ),
+			'thumbnail' => wp_get_attachment_image_url( $new_attachment_id, 'medium' ) ?: wp_get_attachment_url( $new_attachment_id ),
+		] );
 	}
 
 	// --- Gallery Pages ---

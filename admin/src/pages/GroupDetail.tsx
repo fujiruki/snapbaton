@@ -143,28 +143,18 @@ export function GroupDetail({ groupId, onBack }: Props) {
   const handleEditorSave = async (result: ImageEditorSaveResult) => {
     if (!editorImage) return;
     const file = new File([result.annotatedBlob], 'edited.jpg', { type: 'image/jpeg' });
-    const formData = new FormData();
-    formData.append('file', file);
     try {
-      const res = await fetch(
-        `${snapbatonData.apiBase.replace('/snapbaton/v1', '')}/wp/v2/media/${editorImage.attachmentId}`,
-        {
-          method: 'POST',
-          headers: { 'X-WP-Nonce': snapbatonData.nonce },
-          body: formData,
-        }
+      const data = await api.upload<{ id: number; url: string; thumbnail: string }>(
+        `/images/${editorImage.id}/replace`,
+        file
       );
-      if (res.ok) {
-        const data = await res.json();
-        setImages((prev) => prev.map((i) =>
-          i.id === editorImage.id
-            ? { ...i, url: data.source_url + '?t=' + Date.now(), thumbnail: (data.media_details?.sizes?.medium?.source_url || data.source_url) + '?t=' + Date.now() }
-            : i
-        ));
-        toast.show('画像を保存しました');
-      } else {
-        toast.show('画像の保存に失敗しました');
-      }
+      const t = '?t=' + Date.now();
+      setImages((prev) => prev.map((i) =>
+        i.id === editorImage.id
+          ? { ...i, url: data.url + t, thumbnail: data.thumbnail + t, attachment_id: data.id }
+          : i
+      ));
+      toast.show('画像を保存しました');
     } catch {
       toast.show('画像の保存に失敗しました');
     }
