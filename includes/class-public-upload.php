@@ -268,7 +268,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans",sans-serif;bac
   <!-- Step 3: アップロード -->
   <div id="step-upload" class="sb-card hidden">
     <h2 id="upload-group-name"></h2>
-    <input type="file" id="file-input" accept="image/*,video/*" multiple style="display:none">
+    <input type="file" id="file-input" accept="image/jpeg,image/png,image/gif,image/webp,video/*" multiple style="display:none">
     <div class="sb-dropzone" id="dropzone">
       📷 タップして写真・動画を選択
     </div>
