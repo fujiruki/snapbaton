@@ -140,6 +140,13 @@ class RestApi {
 			'permission_callback' => [ Permissions::class, 'can_delete' ],
 		] );
 
+		// --- Gallery Pages ---
+		register_rest_route( self::NAMESPACE, '/gallery-pages', [
+			'methods'             => 'GET',
+			'callback'            => [ self::class, 'get_gallery_pages' ],
+			'permission_callback' => [ Permissions::class, 'can_manage' ],
+		] );
+
 		// --- Tags ---
 		register_rest_route( self::NAMESPACE, '/tags', [
 			'methods'             => 'GET',
@@ -595,6 +602,33 @@ class RestApi {
 				'tag_id'   => $tag_id,
 			] );
 		}
+	}
+
+	// --- Gallery Pages ---
+
+	public static function get_gallery_pages( \WP_REST_Request $request ): \WP_REST_Response {
+		global $wpdb;
+
+		$pages = $wpdb->get_results(
+			"SELECT ID, post_title, post_status FROM {$wpdb->posts}
+			 WHERE post_content LIKE '%[snapbaton_gallery%'
+			 AND post_type IN ('page', 'post')
+			 AND post_status IN ('publish', 'draft', 'private')
+			 ORDER BY post_title ASC"
+		);
+
+		$result = [];
+		foreach ( $pages as $page ) {
+			$result[] = [
+				'id'     => (int) $page->ID,
+				'title'  => $page->post_title,
+				'status' => $page->post_status,
+				'url'    => get_permalink( $page->ID ),
+				'edit'   => get_edit_post_link( $page->ID, 'raw' ),
+			];
+		}
+
+		return rest_ensure_response( $result );
 	}
 
 	// --- Trash ---

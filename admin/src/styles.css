@@ -470,6 +470,72 @@
   transition: width 0.3s;
 }
 
+/* ===== Settings / Help ===== */
+.sb-card-section {
+  background: #fff;
+  border: 1px solid #c3c4c7;
+  border-radius: 4px;
+  padding: 20px 24px;
+}
+
+.sb-card-section h2 {
+  margin: 0 0 16px;
+  font-size: 16px;
+}
+
+.sb-card-section h3 {
+  font-size: 14px;
+  margin: 0 0 8px;
+}
+
+.sb-help-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.sb-help-step {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.sb-help-step-num {
+  background: #2271b1;
+  color: #fff;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.sb-help-step p {
+  margin: 4px 0 0;
+  color: #646970;
+  font-size: 13px;
+}
+
+.sb-code-block {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #f0f0f1;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 13px;
+}
+
+.sb-code-block code {
+  background: none;
+  padding: 0;
+  color: #1d2327;
+}
+
 /* ===== Loading ===== */
 .sb-loading {
   display: flex;

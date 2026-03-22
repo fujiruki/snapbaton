@@ -3,12 +3,14 @@ import { GroupList } from './pages/GroupList';
 import { GroupDetail } from './pages/GroupDetail';
 import { PostSetList } from './pages/PostSetList';
 import { TrashList } from './pages/TrashList';
+import { Settings } from './pages/Settings';
 
 type Page =
   | { name: 'groups' }
   | { name: 'group-detail'; groupId: number }
   | { name: 'post-sets' }
-  | { name: 'trash' };
+  | { name: 'trash' }
+  | { name: 'settings' };
 
 export function App() {
   const initialPage = snapbatonData.page;
@@ -17,7 +19,9 @@ export function App() {
       ? { name: 'post-sets' }
       : initialPage === 'snapbaton-trash'
         ? { name: 'trash' }
-        : { name: 'groups' }
+        : initialPage === 'snapbaton-settings'
+          ? { name: 'settings' }
+          : { name: 'groups' }
   );
 
   switch (page.name) {
@@ -38,5 +42,7 @@ export function App() {
       return <PostSetList />;
     case 'trash':
       return <TrashList />;
+    case 'settings':
+      return <Settings />;
   }
 }
