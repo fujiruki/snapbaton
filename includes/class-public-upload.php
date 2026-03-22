@@ -40,6 +40,13 @@ class PublicUpload {
 			],
 		] );
 
+		// グループリネーム（トークン認証）
+		register_rest_route( self::NAMESPACE, '/upload-groups/(?P<id>\d+)', [
+			'methods'             => 'POST',
+			'callback'            => [ self::class, 'rename_group' ],
+			'permission_callback' => '__return_true',
+		] );
+
 		// ファイルアップロード（トークン認証）
 		register_rest_route( self::NAMESPACE, '/upload-files/(?P<group_id>\d+)', [
 			'methods'             => 'POST',
@@ -131,6 +138,31 @@ class PublicUpload {
 	}
 
 	/**
+	 * グループリネーム
+	 */
+	public static function rename_group( \WP_REST_Request $request ): \WP_REST_Response|\WP_Error {
+		if ( ! self::verify_token( $request ) ) {
+			return new \WP_Error( 'unauthorized', '認証が必要です。', [ 'status' => 401 ] );
+		}
+
+		$name = sanitize_text_field( $request->get_param( 'name' ) ?? '' );
+		if ( empty( $name ) ) {
+			return new \WP_Error( 'missing_name', 'グループ名を入力してください。', [ 'status' => 400 ] );
+		}
+
+		global $wpdb;
+		$prefix = $wpdb->prefix . 'snapbaton_';
+		$id     = absint( $request['id'] );
+
+		$wpdb->update( "{$prefix}groups", [
+			'name'       => $name,
+			'updated_at' => current_time( 'mysql' ),
+		], [ 'id' => $id ] );
+
+		return rest_ensure_response( [ 'id' => $id, 'name' => $name ] );
+	}
+
+	/**
 	 * ファイルアップロード
 	 */
 	public static function upload_files( \WP_REST_Request $request ): \WP_REST_Response|\WP_Error {
@@ -176,6 +208,7 @@ class PublicUpload {
 		return rest_ensure_response( [
 			'id'            => $wpdb->insert_id,
 			'attachment_id' => $attachment_id,
+			'thumbnail'     => wp_get_attachment_image_url( $attachment_id, 'thumbnail' ) ?: '',
 		] );
 	}
 
@@ -232,6 +265,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans",sans-serif;bac
 .sb-error{background:#fef0f0;color:#d70015;padding:10px;border-radius:8px;font-size:13px;margin-bottom:12px;text-align:center}
 .sb-toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1d1d1f;color:#fff;padding:10px 24px;border-radius:20px;font-size:14px;z-index:100;animation:sb-fadein .2s}
 @keyframes sb-fadein{from{opacity:0;transform:translateX(-50%) translateY(10px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+.sb-thumbs{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin:12px 0}
+.sb-thumbs img{width:56px;height:56px;object-fit:cover;border-radius:6px}
 .hidden{display:none}
 .sb-install-banner{background:#0071e3;color:#fff;border-radius:10px;padding:12px 16px;margin-bottom:16px;font-size:13px;text-align:center;cursor:pointer}
 </style>
@@ -263,6 +298,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans",sans-serif;bac
     <div class="sb-or">— または —</div>
     <input type="text" class="sb-input" id="new-group-name" placeholder="新しいグループ名を入力">
     <button class="sb-btn sb-btn-primary" id="btn-next" disabled>次へ</button>
+    <button class="sb-btn sb-btn-secondary" id="btn-later">後で決める（先にアップロード）</button>
   </div>
 
   <!-- Step 3: アップロード -->
@@ -283,7 +319,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans",sans-serif;bac
     <div class="sb-done">
       <div class="icon">✅</div>
       <p id="done-message"></p>
-      <button class="sb-btn sb-btn-primary" id="btn-more">続けてアップロード</button>
+      <div id="uploaded-thumbs" class="sb-thumbs"></div>
+      <div id="rename-section" class="hidden">
+        <p style="font-size:13px;color:#86868b;margin:12px 0 8px">このグループに名前をつけましょう</p>
+        <input type="text" class="sb-input" id="rename-input" placeholder="グループ名を入力">
+        <button class="sb-btn sb-btn-primary" id="btn-rename" style="margin-top:8px">名前を決定</button>
+      </div>
+      <button class="sb-btn sb-btn-primary" id="btn-more" style="margin-top:12px">続けてアップロード</button>
       <button class="sb-btn sb-btn-secondary" id="btn-restart">グループを変更</button>
     </div>
   </div>
@@ -295,6 +337,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans",sans-serif;bac
   let token = sessionStorage.getItem('sb_token') || '';
   let selectedGroupId = null;
   let selectedGroupName = '';
+
+  let isDecideLater = false;
+  let uploadedThumbs = [];
 
   const steps = {
     auth: document.getElementById('step-auth'),
@@ -402,9 +447,26 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans",sans-serif;bac
       selectedGroupId = data.id;
       selectedGroupName = data.name;
     }
+    isDecideLater = false;
     document.getElementById('upload-group-name').textContent = selectedGroupName + ' にアップロード';
     showStep('upload');
     btnNext.disabled = false;
+  });
+
+  document.getElementById('btn-later').addEventListener('click', async () => {
+    var ts = new Date().toLocaleString('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});
+    var tempName = '未整理 ' + ts;
+    var res = await fetch(API + '/upload-groups', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Upload-Token': token },
+      body: JSON.stringify({ name: tempName }),
+    });
+    var data = await res.json();
+    selectedGroupId = data.id;
+    selectedGroupName = tempName;
+    isDecideLater = true;
+    document.getElementById('upload-group-name').textContent = '📷 まずアップロード';
+    showStep('upload');
   });
 
   // === アップロード ===
@@ -427,16 +489,19 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans",sans-serif;bac
     dropzone.classList.add('uploading');
     dropzone.textContent = 'アップロード中...';
     uploadStatus.classList.remove('hidden');
+    uploadedThumbs = [];
 
     let done = 0;
     for (const file of arr) {
       const fd = new FormData();
       fd.append('file', file);
-      await fetch(API + '/upload-files/' + selectedGroupId, {
+      var res = await fetch(API + '/upload-files/' + selectedGroupId, {
         method: 'POST',
         headers: { 'X-Upload-Token': token },
         body: fd,
       });
+      var result = await res.json();
+      if (result.thumbnail) uploadedThumbs.push(result.thumbnail);
       done++;
       progressBar.style.width = (done / arr.length * 100) + '%';
       fileCount.textContent = done + ' / ' + arr.length + ' 完了';
@@ -444,6 +509,25 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans",sans-serif;bac
 
     dropzone.classList.remove('uploading');
     document.getElementById('done-message').textContent = arr.length + '件のファイルをアップロードしました';
+
+    // サムネイル一覧表示
+    var thumbsEl = document.getElementById('uploaded-thumbs');
+    thumbsEl.innerHTML = '';
+    uploadedThumbs.forEach(function(u) {
+      var img = document.createElement('img');
+      img.src = u;
+      thumbsEl.appendChild(img);
+    });
+
+    // 後で決めるモードならリネームセクション表示
+    var renameSection = document.getElementById('rename-section');
+    if (isDecideLater) {
+      renameSection.classList.remove('hidden');
+      document.getElementById('rename-input').value = '';
+    } else {
+      renameSection.classList.add('hidden');
+    }
+
     showStep('done');
     fileInput.value = '';
     uploadStatus.classList.add('hidden');
@@ -453,6 +537,20 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans",sans-serif;bac
   // === 完了 ===
   document.getElementById('btn-more').addEventListener('click', () => {
     showStep('upload');
+  });
+
+  document.getElementById('btn-rename').addEventListener('click', async () => {
+    var name = document.getElementById('rename-input').value.trim();
+    if (!name) return;
+    await fetch(API + '/upload-groups/' + selectedGroupId, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Upload-Token': token },
+      body: JSON.stringify({ name: name }),
+    });
+    selectedGroupName = name;
+    isDecideLater = false;
+    document.getElementById('rename-section').classList.add('hidden');
+    document.getElementById('done-message').textContent = '「' + name + '」に保存しました';
   });
 
   document.getElementById('btn-restart').addEventListener('click', () => {
