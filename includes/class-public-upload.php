@@ -284,7 +284,7 @@ class PublicUpload {
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="SnapBaton">
 <link rel="manifest" href="{$api_base}/upload-manifest">
-<title>SnapBaton アップロード</title>
+<title>{$site_name} - アップロード</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans",sans-serif;background:#f5f5f7;color:#1d1d1f;min-height:100vh;min-height:100dvh}
@@ -333,8 +333,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans",sans-serif;bac
 <body>
 <div class="sb-app" id="app">
   <div class="sb-logo">
-    <h1>SnapBaton</h1>
-    <p>写真・動画アップロード</p>
+    <h1>{$site_name}</h1>
+    <p>SnapBaton 写真・動画アップロード</p>
   </div>
 
   <!-- Step 1: パスコード -->

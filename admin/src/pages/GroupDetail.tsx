@@ -257,12 +257,48 @@ export function GroupDetail({ groupId, onBack }: Props) {
         <button className="button" onClick={onBack} title="グループ一覧に戻る">
           <ArrowLeft size={16} />
         </button>
-        <h1 className="wp-heading-inline">{group.name}</h1>
+        <input
+          type="text"
+          defaultValue={group.name}
+          className="wp-heading-inline"
+          style={{ border: '1px solid transparent', padding: '2px 6px', borderRadius: '4px', fontSize: '23px', fontWeight: 600, width: 'auto', minWidth: '200px', background: 'transparent' }}
+          onFocus={(e) => { e.target.style.borderColor = '#2271b1'; e.target.style.background = '#fff'; }}
+          onBlur={async (e) => {
+            e.target.style.borderColor = 'transparent';
+            e.target.style.background = 'transparent';
+            const val = e.target.value.trim();
+            if (val && val !== group.name) {
+              try {
+                await api.put(`/groups/${groupId}`, { name: val });
+                setGroup({ ...group, name: val });
+                toast.show('グループ名を更新しました');
+              } catch { toast.show('更新に失敗しました'); }
+            }
+          }}
+          readOnly={!snapbatonData.canEdit}
+        />
       </div>
 
-      {group.description && (
-        <p style={{ color: '#646970', margin: '4px 0 0' }}>{group.description}</p>
-      )}
+      <input
+        type="text"
+        defaultValue={group.description}
+        placeholder={snapbatonData.canEdit ? '説明文を入力...' : ''}
+        style={{ width: '100%', border: '1px solid transparent', padding: '4px 6px', borderRadius: '4px', fontSize: '14px', color: '#646970', background: 'transparent', margin: '4px 0 0' }}
+        onFocus={(e) => { e.target.style.borderColor = '#2271b1'; e.target.style.background = '#fff'; }}
+        onBlur={async (e) => {
+          e.target.style.borderColor = 'transparent';
+          e.target.style.background = 'transparent';
+          const val = e.target.value;
+          if (val !== (group.description || '')) {
+            try {
+              await api.put(`/groups/${groupId}`, { description: val });
+              setGroup({ ...group, description: val });
+              toast.show('説明文を更新しました');
+            } catch { toast.show('更新に失敗しました'); }
+          }
+        }}
+        readOnly={!snapbatonData.canEdit}
+      />
 
       {/* グループタグ */}
       <div style={{ margin: '8px 0' }}>
