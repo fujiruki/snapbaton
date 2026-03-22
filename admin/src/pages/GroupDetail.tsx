@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef, DragEvent } from 'react';
-import { ArrowLeft, Upload, Grid, List, Copy, Download, Link, Image as ImageIcon, Tag, Eraser, Globe, Trash2 } from 'lucide-react';
+import { ArrowLeft, Upload, Grid, List, Copy, Download, Link, Image as ImageIcon, Tag, Eraser, Globe, Trash2, Star } from 'lucide-react';
 import api from '../api';
 import { useToast } from '../hooks/useToast';
 import { Toast } from '../components/Toast';
@@ -12,6 +12,7 @@ interface Group {
   description: string;
   tags: string[];
   is_public: number;
+  cover_image_id: number;
 }
 
 interface ImageItem {
@@ -111,6 +112,40 @@ export function GroupDetail({ groupId, onBack }: Props) {
       toast.show('タグを更新しました');
     } catch {
       toast.show('タグの保存に失敗しました');
+    }
+  };
+
+  // アイキャッチ設定
+  const handleSetCover = async (imageId: number) => {
+    if (!group) return;
+    try {
+      await api.put(`/groups/${groupId}`, { cover_image_id: imageId });
+      setGroup({ ...group, cover_image_id: imageId });
+      toast.show('アイキャッチに設定しました');
+    } catch {
+      toast.show('設定に失敗しました');
+    }
+  };
+
+  // ドラッグ並べ替え
+  const handleDragStart = (e: React.DragEvent, idx: number) => {
+    e.dataTransfer.setData('text/plain', String(idx));
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDropReorder = async (e: React.DragEvent, dropIdx: number) => {
+    e.preventDefault();
+    const dragIdx = parseInt(e.dataTransfer.getData('text/plain'), 10);
+    if (dragIdx === dropIdx || isNaN(dragIdx)) return;
+    const newImages = [...images];
+    const [moved] = newImages.splice(dragIdx, 1);
+    newImages.splice(dropIdx, 0, moved!);
+    setImages(newImages);
+    try {
+      await api.post(`/groups/${groupId}/reorder`, { image_ids: newImages.map((i) => i.id) });
+      toast.show('並び順を更新しました');
+    } catch {
+      toast.show('並び替えに失敗しました');
     }
   };
 
@@ -312,8 +347,20 @@ export function GroupDetail({ groupId, onBack }: Props) {
 
       {viewMode === 'grid' ? (
         <div className="sb-image-grid">
-          {images.map((img) => (
-            <div key={`${img.id}-${img.title}-${img.description}`} className="sb-image-card">
+          {images.map((img, idx) => (
+            <div
+              key={`${img.id}-${img.title}-${img.description}`}
+              className={`sb-image-card${group.cover_image_id === img.id ? ' sb-cover-card' : ''}`}
+              draggable
+              onDragStart={(e) => handleDragStart(e, idx)}
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={(e) => handleDropReorder(e, idx)}
+            >
+              {group.cover_image_id === img.id && (
+                <div className="sb-cover-badge">
+                  <Star size={10} fill="#fff" /> アイキャッチ
+                </div>
+              )}
               <img
                 src={img.thumbnail || img.url}
                 alt={img.title}
@@ -365,6 +412,13 @@ export function GroupDetail({ groupId, onBack }: Props) {
                 )}
               </div>
               <div className="sb-image-card-actions">
+                <button
+                  className={`button button-small${group.cover_image_id === img.id ? ' sb-btn-cover-active' : ''}`}
+                  onClick={() => handleSetCover(img.id)}
+                  title="アイキャッチに設定"
+                >
+                  <Star size={12} fill={group.cover_image_id === img.id ? '#dba617' : 'none'} />
+                </button>
                 <button
                   className="button button-small"
                   onClick={() => copyToClipboard(img.description || '', '説明文')}

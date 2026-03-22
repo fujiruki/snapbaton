@@ -339,6 +339,43 @@
   font-size: 12px;
 }
 
+/* ===== Cover / Drag ===== */
+.sb-image-card[draggable="true"] {
+  cursor: grab;
+}
+
+.sb-image-card[draggable="true"]:active {
+  cursor: grabbing;
+}
+
+.sb-cover-card {
+  border: 2px solid #dba617 !important;
+}
+
+.sb-cover-badge {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  background: #dba617;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  z-index: 1;
+}
+
+.sb-image-card {
+  position: relative;
+}
+
+.sb-btn-cover-active {
+  color: #dba617 !important;
+}
+
 /* ===== Public Toggle ===== */
 .sb-btn-public-on {
   background: #00a32a !important;

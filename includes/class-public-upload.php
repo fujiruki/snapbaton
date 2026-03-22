@@ -47,6 +47,20 @@ class PublicUpload {
 			'permission_callback' => '__return_true',
 		] );
 
+		// グループカバー設定（トークン認証）
+		register_rest_route( self::NAMESPACE, '/upload-groups/(?P<id>\d+)/cover', [
+			'methods'             => 'POST',
+			'callback'            => [ self::class, 'set_cover' ],
+			'permission_callback' => '__return_true',
+		] );
+
+		// 画像並べ替え（トークン認証）
+		register_rest_route( self::NAMESPACE, '/upload-reorder/(?P<group_id>\d+)', [
+			'methods'             => 'POST',
+			'callback'            => [ self::class, 'reorder_images' ],
+			'permission_callback' => '__return_true',
+		] );
+
 		// ファイルアップロード（トークン認証）
 		register_rest_route( self::NAMESPACE, '/upload-files/(?P<group_id>\d+)', [
 			'methods'             => 'POST',
@@ -163,6 +177,47 @@ class PublicUpload {
 	}
 
 	/**
+	 * カバー画像設定
+	 */
+	public static function set_cover( \WP_REST_Request $request ): \WP_REST_Response|\WP_Error {
+		if ( ! self::verify_token( $request ) ) {
+			return new \WP_Error( 'unauthorized', '認証が必要です。', [ 'status' => 401 ] );
+		}
+
+		global $wpdb;
+		$prefix = $wpdb->prefix . 'snapbaton_';
+		$id     = absint( $request['id'] );
+		$cover  = absint( $request->get_param( 'cover_image_id' ) );
+
+		$wpdb->update( "{$prefix}groups", [ 'cover_image_id' => $cover ], [ 'id' => $id ] );
+
+		return rest_ensure_response( [ 'ok' => true ] );
+	}
+
+	/**
+	 * 画像並べ替え
+	 */
+	public static function reorder_images( \WP_REST_Request $request ): \WP_REST_Response|\WP_Error {
+		if ( ! self::verify_token( $request ) ) {
+			return new \WP_Error( 'unauthorized', '認証が必要です。', [ 'status' => 401 ] );
+		}
+
+		global $wpdb;
+		$prefix    = $wpdb->prefix . 'snapbaton_';
+		$image_ids = $request->get_param( 'image_ids' ) ?? [];
+
+		foreach ( $image_ids as $order => $image_id ) {
+			$wpdb->update(
+				"{$prefix}images",
+				[ 'sort_order' => (int) $order ],
+				[ 'id' => absint( $image_id ) ]
+			);
+		}
+
+		return rest_ensure_response( [ 'reordered' => true ] );
+	}
+
+	/**
 	 * ファイルアップロード
 	 */
 	public static function upload_files( \WP_REST_Request $request ): \WP_REST_Response|\WP_Error {
@@ -266,7 +321,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans",sans-serif;bac
 .sb-toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1d1d1f;color:#fff;padding:10px 24px;border-radius:20px;font-size:14px;z-index:100;animation:sb-fadein .2s}
 @keyframes sb-fadein{from{opacity:0;transform:translateX(-50%) translateY(10px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
 .sb-thumbs{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin:12px 0}
-.sb-thumbs img{width:56px;height:56px;object-fit:cover;border-radius:6px}
+.sb-thumbs .sb-thumb{width:64px;height:64px;object-fit:cover;border-radius:6px;border:2px solid transparent;cursor:pointer;transition:border-color .15s}
+.sb-thumbs .sb-thumb:active{opacity:.7}
+.sb-thumbs .sb-thumb.sb-thumb-cover{border-color:#f5a623;box-shadow:0 0 0 2px rgba(245,166,35,.3)}
+.sb-thumb-hint{font-size:11px;color:#86868b;text-align:center;margin:4px 0 8px}
+.sb-thumbs .sb-thumb.dragging{opacity:.4}
 .hidden{display:none}
 .sb-install-banner{background:#0071e3;color:#fff;border-radius:10px;padding:12px 16px;margin-bottom:16px;font-size:13px;text-align:center;cursor:pointer}
 </style>
@@ -319,6 +378,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans",sans-serif;bac
     <div class="sb-done">
       <div class="icon">✅</div>
       <p id="done-message"></p>
+      <p class="sb-thumb-hint" id="thumb-hint" style="display:none">タップでアイキャッチ選択 ／ 長押しドラッグで並べ替え</p>
       <div id="uploaded-thumbs" class="sb-thumbs"></div>
       <div id="rename-section" class="hidden">
         <p style="font-size:13px;color:#86868b;margin:12px 0 8px">このグループに名前をつけましょう</p>
@@ -501,7 +561,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans",sans-serif;bac
         body: fd,
       });
       var result = await res.json();
-      if (result.thumbnail) uploadedThumbs.push(result.thumbnail);
+      if (result.thumbnail) uploadedThumbs.push({ id: result.id, thumb: result.thumbnail });
       done++;
       progressBar.style.width = (done / arr.length * 100) + '%';
       fileCount.textContent = done + ' / ' + arr.length + ' 完了';
@@ -510,14 +570,58 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans",sans-serif;bac
     dropzone.classList.remove('uploading');
     document.getElementById('done-message').textContent = arr.length + '件のファイルをアップロードしました';
 
-    // サムネイル一覧表示
+    // サムネイル一覧表示（タップでアイキャッチ、ドラッグで並べ替え）
     var thumbsEl = document.getElementById('uploaded-thumbs');
     thumbsEl.innerHTML = '';
-    uploadedThumbs.forEach(function(u) {
+    document.getElementById('thumb-hint').style.display = uploadedThumbs.length > 0 ? '' : 'none';
+    uploadedThumbs.forEach(function(item, i) {
       var img = document.createElement('img');
-      img.src = u;
+      img.src = item.thumb;
+      img.className = 'sb-thumb';
+      img.dataset.imageId = item.id;
+      img.dataset.idx = i;
+      img.draggable = true;
+      // タップでアイキャッチ
+      img.addEventListener('click', async function() {
+        await fetch(API + '/upload-groups/' + selectedGroupId + '/cover', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Upload-Token': token },
+          body: JSON.stringify({ cover_image_id: item.id }),
+        });
+        thumbsEl.querySelectorAll('.sb-thumb').forEach(function(t) { t.classList.remove('sb-thumb-cover'); });
+        img.classList.add('sb-thumb-cover');
+      });
+      // ドラッグ並べ替え
+      img.addEventListener('dragstart', function(e) { e.dataTransfer.setData('text/plain', String(i)); img.classList.add('dragging'); });
+      img.addEventListener('dragend', function() { img.classList.remove('dragging'); });
+      img.addEventListener('dragover', function(e) { e.preventDefault(); });
+      img.addEventListener('drop', async function(e) {
+        e.preventDefault();
+        var from = parseInt(e.dataTransfer.getData('text/plain'));
+        var to = i;
+        if (from === to) return;
+        var moved = uploadedThumbs.splice(from, 1)[0];
+        uploadedThumbs.splice(to, 0, moved);
+        renderThumbs();
+        await fetch(API + '/upload-reorder/' + selectedGroupId, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Upload-Token': token },
+          body: JSON.stringify({ image_ids: uploadedThumbs.map(function(x) { return x.id; }) }),
+        });
+      });
       thumbsEl.appendChild(img);
     });
+    function renderThumbs() {
+      var els = thumbsEl.querySelectorAll('.sb-thumb');
+      els.forEach(function(el) { el.remove(); });
+      uploadedThumbs.forEach(function(item, idx) {
+        var existing = thumbsEl.querySelector('[data-image-id="'+item.id+'"]');
+        if (!existing) {
+          // re-render needed - just reload
+          location.reload();
+        }
+      });
+    }
 
     // 後で決めるモードならリネームセクション表示
     var renameSection = document.getElementById('rename-section');

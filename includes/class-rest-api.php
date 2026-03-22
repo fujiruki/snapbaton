@@ -114,6 +114,13 @@ class RestApi {
 			'permission_callback' => '__return_true',
 		] );
 
+		// --- Image Reorder ---
+		register_rest_route( self::NAMESPACE, '/groups/(?P<group_id>\d+)/reorder', [
+			'methods'             => 'POST',
+			'callback'            => [ self::class, 'reorder_images' ],
+			'permission_callback' => [ Permissions::class, 'can_edit' ],
+		] );
+
 		// --- Image Replace (エディタ保存) ---
 		register_rest_route( self::NAMESPACE, '/images/(?P<id>\d+)/replace', [
 			'methods'             => 'POST',
@@ -177,7 +184,10 @@ class RestApi {
 		$groups = $wpdb->get_results(
 			"SELECT g.*,
 				(SELECT COUNT(*) FROM {$prefix}images i WHERE i.group_id = g.id AND i.deleted_at IS NULL) AS image_count,
-				(SELECT i.attachment_id FROM {$prefix}images i WHERE i.group_id = g.id AND i.deleted_at IS NULL ORDER BY i.sort_order ASC LIMIT 1) AS cover_attachment_id
+				COALESCE(
+					(SELECT ci.attachment_id FROM {$prefix}images ci WHERE ci.id = g.cover_image_id AND ci.deleted_at IS NULL),
+					(SELECT i.attachment_id FROM {$prefix}images i WHERE i.group_id = g.id AND i.deleted_at IS NULL ORDER BY i.sort_order ASC LIMIT 1)
+				) AS cover_attachment_id
 			 FROM {$prefix}groups g
 			 WHERE g.deleted_at IS NULL
 			 ORDER BY g.created_at DESC"
@@ -186,6 +196,7 @@ class RestApi {
 		foreach ( $groups as &$group ) {
 			$group->image_count     = (int) $group->image_count;
 			$group->is_public       = (int) $group->is_public;
+			$group->cover_image_id  = (int) ( $group->cover_image_id ?? 0 );
 			$group->cover_thumbnail = $group->cover_attachment_id
 				? wp_get_attachment_image_url( $group->cover_attachment_id, 'medium' )
 				: null;
@@ -208,7 +219,8 @@ class RestApi {
 			return new \WP_Error( 'not_found', __( 'Group not found.', 'snapbaton' ), [ 'status' => 404 ] );
 		}
 
-		$group->is_public = (int) $group->is_public;
+		$group->is_public      = (int) $group->is_public;
+		$group->cover_image_id = (int) ( $group->cover_image_id ?? 0 );
 		$group->tags = $wpdb->get_col( $wpdb->prepare(
 			"SELECT t.name FROM {$prefix}tags t
 			 INNER JOIN {$prefix}group_tags gt ON t.id = gt.tag_id
@@ -257,6 +269,9 @@ class RestApi {
 		}
 		if ( $request->has_param( 'is_public' ) ) {
 			$data['is_public'] = $request->get_param( 'is_public' ) ? 1 : 0;
+		}
+		if ( $request->has_param( 'cover_image_id' ) ) {
+			$data['cover_image_id'] = absint( $request->get_param( 'cover_image_id' ) ) ?: null;
 		}
 
 		if ( ! empty( $data ) ) {
@@ -609,6 +624,24 @@ class RestApi {
 				'tag_id'   => $tag_id,
 			] );
 		}
+	}
+
+	// --- Image Reorder ---
+
+	public static function reorder_images( \WP_REST_Request $request ): \WP_REST_Response {
+		global $wpdb;
+		$prefix    = $wpdb->prefix . 'snapbaton_';
+		$image_ids = $request->get_param( 'image_ids' ) ?? [];
+
+		foreach ( $image_ids as $order => $image_id ) {
+			$wpdb->update(
+				"{$prefix}images",
+				[ 'sort_order' => (int) $order ],
+				[ 'id' => absint( $image_id ) ]
+			);
+		}
+
+		return rest_ensure_response( [ 'reordered' => true ] );
 	}
 
 	// --- Image Replace ---

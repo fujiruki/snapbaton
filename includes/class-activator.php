@@ -32,6 +32,7 @@ class Activator {
 			created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			updated_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			deleted_at datetime DEFAULT NULL,
+			cover_image_id bigint(20) unsigned DEFAULT NULL,
 			is_public tinyint(1) NOT NULL DEFAULT 0,
 			PRIMARY KEY  (id),
 			KEY author_id (author_id),
