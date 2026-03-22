@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
-import { Plus, Grid, List, Image as ImageIcon, Smartphone, Copy } from 'lucide-react';
+import { useEffect, useState, useRef } from 'react';
+import { Plus, Grid, List, Image as ImageIcon, Smartphone, Copy, QrCode, X } from 'lucide-react';
+import QRCode from 'qrcode';
 import api from '../api';
 
 interface Group {
@@ -22,6 +23,8 @@ export function GroupList({ onSelectGroup }: Props) {
   const [showCreate, setShowCreate] = useState(false);
   const [newName, setNewName] = useState('');
   const [newDesc, setNewDesc] = useState('');
+  const [showQr, setShowQr] = useState(false);
+  const qrCanvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
     api.get<Group[]>('/groups').then((data) => {
@@ -29,6 +32,12 @@ export function GroupList({ onSelectGroup }: Props) {
       setLoading(false);
     });
   }, []);
+
+  useEffect(() => {
+    if (showQr && qrCanvasRef.current) {
+      QRCode.toCanvas(qrCanvasRef.current, snapbatonData.uploadUrl, { width: 240, margin: 2 });
+    }
+  }, [showQr]);
 
   const handleCreate = async () => {
     if (!newName.trim()) return;
@@ -100,6 +109,13 @@ export function GroupList({ onSelectGroup }: Props) {
               title="URLをコピー"
             >
               <Copy size={12} />
+            </button>
+            <button
+              className="button button-small"
+              onClick={() => setShowQr(true)}
+              title="QRコードを表示"
+            >
+              <QrCode size={12} />
             </button>
           </div>
           <p style={{ margin: '6px 0 0', fontSize: '12px', color: '#646970' }}>
@@ -186,6 +202,20 @@ export function GroupList({ onSelectGroup }: Props) {
           <ImageIcon size={48} strokeWidth={1} />
           <p>グループがまだありません。</p>
           <p>「新しいグループ」から最初のグループを作成しましょう。</p>
+        </div>
+      )}
+
+      {showQr && (
+        <div className="sb-qr-overlay" onClick={() => setShowQr(false)}>
+          <div className="sb-qr-popup" onClick={(e) => e.stopPropagation()}>
+            <button className="sb-qr-close" onClick={() => setShowQr(false)}>
+              <X size={20} />
+            </button>
+            <h3>スマホでスキャン</h3>
+            <canvas ref={qrCanvasRef} />
+            <p className="sb-qr-url">{snapbatonData.uploadUrl}</p>
+            <p className="sb-qr-pass">パスコード: <strong>{snapbatonData.uploadPass}</strong></p>
+          </div>
         </div>
       )}
     </div>
