@@ -99,6 +99,7 @@ class Admin {
 			'apiBase'    => rest_url( 'snapbaton/v1' ),
 			'nonce'      => wp_create_nonce( 'wp_rest' ),
 			'page'       => sanitize_text_field( $_GET['page'] ?? '' ),
+			'groupId'    => absint( $_GET['group'] ?? 0 ),
 			'userId'     => get_current_user_id(),
 			'canEdit'    => current_user_can( 'edit_posts' ),
 			'canDelete'  => current_user_can( 'edit_others_posts' ),

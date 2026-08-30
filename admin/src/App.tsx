@@ -16,13 +16,15 @@ type Page =
 export function App() {
   const initialPage = snapbatonData.page;
   const [page, setPage] = useState<Page>(
-    initialPage === 'snapbaton-post-sets'
-      ? { name: 'post-sets' }
-      : initialPage === 'snapbaton-trash'
-        ? { name: 'trash' }
-        : initialPage === 'snapbaton-settings'
-          ? { name: 'settings' }
-          : { name: 'groups' }
+    snapbatonData.groupId > 0
+      ? { name: 'group-detail', groupId: snapbatonData.groupId }
+      : initialPage === 'snapbaton-post-sets'
+        ? { name: 'post-sets' }
+        : initialPage === 'snapbaton-trash'
+          ? { name: 'trash' }
+          : initialPage === 'snapbaton-settings'
+            ? { name: 'settings' }
+            : { name: 'groups' }
   );
 
   return (

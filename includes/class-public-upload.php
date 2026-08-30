@@ -273,6 +273,7 @@ class PublicUpload {
 	public static function render_page( \WP_REST_Request $request ): \WP_REST_Response {
 		$site_name = get_bloginfo( 'name' );
 		$api_base  = rest_url( 'snapbaton/v1' );
+		$admin_url = admin_url( 'admin.php?page=snapbaton' );
 
 		$html = <<<HTML
 <!DOCTYPE html>
@@ -344,6 +345,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans",sans-serif;bac
 .sb-fb-cancel{background:#e8e8ed;color:#1d1d1f}
 .sb-fb-submit{background:#0071e3;color:#fff}
 .sb-fb-submit:disabled{opacity:.5}
+.sb-admin-link{display:block;width:100%;padding:14px;border-radius:10px;font-size:16px;font-weight:600;text-align:center;background:#e8e8ed;color:#1d1d1f;text-decoration:none;margin-top:8px}
+.sb-admin-link:active{opacity:.7}
 </style>
 </head>
 <body>
@@ -364,6 +367,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans",sans-serif;bac
     </div>
     <div id="auth-error" class="sb-error hidden"></div>
     <button class="sb-btn sb-btn-primary" id="btn-auth" disabled>ログイン</button>
+    <a href="{$admin_url}" target="_blank" rel="noopener" class="sb-admin-link">管理画面を開く</a>
   </div>
 
   <!-- Step 2: グループ選択 -->
@@ -403,6 +407,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans",sans-serif;bac
       </div>
       <button class="sb-btn sb-btn-primary" id="btn-more" style="margin-top:12px">続けてアップロード</button>
       <button class="sb-btn sb-btn-secondary" id="btn-restart">グループを変更</button>
+      <a id="group-edit-link" href="#" target="_blank" rel="noopener" class="sb-admin-link">このグループを編集する</a>
     </div>
   </div>
 </div>
@@ -430,6 +435,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans",sans-serif;bac
 <script>
 (function() {
   const API = '{$api_base}';
+  const ADMIN_URL = '{$admin_url}';
   let token = sessionStorage.getItem('sb_token') || '';
   let selectedGroupId = null;
   let selectedGroupName = '';
@@ -583,7 +589,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans",sans-serif;bac
   async function uploadFiles(files) {
     const arr = Array.from(files);
     dropzone.classList.add('uploading');
-    dropzone.textContent = 'アップロード中...';
+    dropzone.textContent = 'アップロード中... (0 / ' + arr.length + ')';
     uploadStatus.classList.remove('hidden');
     uploadedThumbs = [];
 
@@ -601,10 +607,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans",sans-serif;bac
       done++;
       progressBar.style.width = (done / arr.length * 100) + '%';
       fileCount.textContent = done + ' / ' + arr.length + ' 完了';
+      dropzone.textContent = 'アップロード中... (' + done + ' / ' + arr.length + ')';
     }
 
     dropzone.classList.remove('uploading');
     document.getElementById('done-message').textContent = arr.length + '件のファイルをアップロードしました';
+    document.getElementById('group-edit-link').href = ADMIN_URL + '&group=' + selectedGroupId;
 
     // サムネイル一覧表示（タップでアイキャッチ、ドラッグで並べ替え）
     var thumbsEl = document.getElementById('uploaded-thumbs');

@@ -4,6 +4,7 @@ interface SnapBatonData {
   apiBase: string;
   nonce: string;
   page: string;
+  groupId: number;
   userId: number;
   canEdit: boolean;
   canDelete: boolean;
