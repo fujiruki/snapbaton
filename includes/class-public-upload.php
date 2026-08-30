@@ -326,7 +326,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans",sans-serif;bac
 .sb-thumbs .sb-thumb.sb-thumb-cover{border-color:#f5a623;box-shadow:0 0 0 2px rgba(245,166,35,.3)}
 .sb-thumb-hint{font-size:11px;color:#86868b;text-align:center;margin:4px 0 8px}
 .sb-thumbs .sb-thumb.dragging{opacity:.4}
-.hidden{display:none}
+.hidden{display:none!important}
 .sb-install-banner{background:#0071e3;color:#fff;border-radius:10px;padding:12px 16px;margin-bottom:16px;font-size:13px;text-align:center;cursor:pointer}
 .sb-fb-fab{position:fixed;bottom:20px;right:20px;width:48px;height:48px;border-radius:50%;background:#1d1d1f;color:#fff;border:none;font-size:22px;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.25);z-index:200}
 .sb-fb-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:201;display:flex;align-items:center;justify-content:center;padding:16px}
@@ -803,6 +803,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans",sans-serif;bac
       var data = await res.json().catch(function() { return {}; });
       if (!res.ok) throw new Error(data.message || '送信に失敗しました。');
       fbOverlay.classList.add('hidden');
+      fbMessage.value = '';
+      fbImages = [];
+      fbRenderImages();
       var toast = document.createElement('div');
       toast.className = 'sb-toast';
       toast.textContent = '要望を送信しました';
