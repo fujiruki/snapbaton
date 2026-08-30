@@ -14,10 +14,12 @@ class Gallery {
 
 	public static function render_shortcode( $atts ): string {
 		$atts = shortcode_atts( [
-			'group_id'         => '',
-			'columns'          => 3,
-			'contact_url'      => '',
-			'show_description' => 'true',
+			'group_id'               => '',
+			'columns'                => 3,
+			'contact_url'            => '',
+			'show_description'       => 'true',
+			'show_image_description' => 'false',
+			'groups_per_page'        => 6,
 		], $atts, 'snapbaton_gallery' );
 
 		global $wpdb;
@@ -38,6 +40,12 @@ class Gallery {
 		if ( empty( $groups ) ) {
 			return '<p style="text-align:center;color:#999;">表示できるギャラリーがありません。</p>';
 		}
+
+		// ページング（groups_per_page単位でグループをスライス）
+		$groups_per_page = max( 1, (int) $atts['groups_per_page'] );
+		$total_pages     = (int) ceil( count( $groups ) / $groups_per_page );
+		$current_page    = isset( $_GET['sbpage'] ) ? min( max( 1, absint( $_GET['sbpage'] ) ), $total_pages ) : 1;
+		$groups          = array_slice( $groups, ( $current_page - 1 ) * $groups_per_page, $groups_per_page );
 
 		// 全グループの画像とタグを取得
 		$group_ids_list = implode( ',', array_map( function( $g ) { return (int) $g->id; }, $groups ) );
@@ -81,9 +89,10 @@ class Gallery {
 		$all_tags = array_keys( $all_tags );
 		sort( $all_tags );
 
-		$columns   = max( 1, min( 6, (int) $atts['columns'] ) );
-		$show_desc = $atts['show_description'] !== 'false';
-		$uid       = 'sbg-' . wp_unique_id();
+		$columns         = max( 1, min( 6, (int) $atts['columns'] ) );
+		$show_desc       = $atts['show_description'] !== 'false';
+		$show_image_desc = $atts['show_image_description'] === 'true';
+		$uid             = 'sbg-' . wp_unique_id();
 
 		// HTML生成
 		ob_start();
@@ -159,6 +168,9 @@ class Gallery {
 					<?php if ( $img->title ) : ?>
 					<div class="sb-gallery-item-title"><?php echo esc_html( $img->title ); ?></div>
 					<?php endif; ?>
+					<?php if ( $show_image_desc && $img->description ) : ?>
+					<div class="sb-gallery-item-desc"><?php echo esc_html( $img->description ); ?></div>
+					<?php endif; ?>
 				</div>
 				<?php endforeach; ?>
 			<?php endforeach; ?>
@@ -171,6 +183,8 @@ class Gallery {
 				</a>
 			</div>
 			<?php endif; ?>
+
+			<?php self::render_pagination( $current_page, $total_pages ); ?>
 		</div>
 
 		<!-- ライトボックス -->
@@ -211,9 +225,14 @@ class Gallery {
 		.sb-gallery-item img,.sb-gallery-item video{width:100%;display:block;transition:transform .3s}
 		.sb-gallery-item:hover img,.sb-gallery-item:hover video{transform:scale(1.03)}
 		.sb-gallery-item-title{padding:6px 4px 2px;font-size:12px;color:#333;text-align:center;line-height:1.4;word-break:break-word}
+		.sb-gallery-item-desc{padding:0 4px 6px;font-size:11px;color:#999;text-align:center;line-height:1.4;word-break:break-word}
+		.sb-gallery-pagination{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin-top:24px}
+		.sb-gallery-page-link{padding:6px 14px;border:1px solid #d2d2d7;border-radius:6px;color:#333;text-decoration:none;font-size:13px}
+		.sb-gallery-page-link:hover{background:#f0f0f1}
+		.sb-gallery-page-link.active{background:#1d1d1f;color:#fff;border-color:#1d1d1f}
 		.sb-gallery-item[style*="display: none"]{display:none!important}
 		.sb-gallery-group-header{column-span:all;padding:20px 0 8px;border-bottom:1px solid #e0e0e0;margin-bottom:16px}
-		.sb-gallery-group-header h3{font-size:20px;margin:0 0 4px;color:#1d1d1f}
+		.sb-gallery-group-header h3{font-size:20px;margin:0 0 4px;color:#1d1d1f;font-family:"Hiragino Mincho ProN","Yu Mincho",serif;font-weight:700}
 		.sb-gallery-group-header p{margin:0 0 8px;color:#666;font-size:14px;line-height:1.5}
 		.sb-gallery-tags{display:flex;gap:4px;flex-wrap:wrap}
 		.sb-gallery-tag{background:#e7f1fd;color:#2271b1;padding:2px 10px;border-radius:12px;font-size:11px}
@@ -243,6 +262,23 @@ class Gallery {
 			.sb-gallery-grid{columns:2}
 		}
 		</style>
+		<?php
+	}
+
+	private static function render_pagination( int $current_page, int $total_pages ): void {
+		if ( $total_pages <= 1 ) return;
+		?>
+		<div class="sb-gallery-pagination">
+			<?php if ( $current_page > 1 ) : ?>
+			<a href="<?php echo esc_url( add_query_arg( 'sbpage', $current_page - 1 ) ); ?>" class="sb-gallery-page-link">&laquo; 前へ</a>
+			<?php endif; ?>
+			<?php for ( $p = 1; $p <= $total_pages; $p++ ) : ?>
+			<a href="<?php echo esc_url( add_query_arg( 'sbpage', $p ) ); ?>" class="sb-gallery-page-link<?php echo $p === $current_page ? ' active' : ''; ?>"><?php echo $p; ?></a>
+			<?php endfor; ?>
+			<?php if ( $current_page < $total_pages ) : ?>
+			<a href="<?php echo esc_url( add_query_arg( 'sbpage', $current_page + 1 ) ); ?>" class="sb-gallery-page-link">次へ &raquo;</a>
+			<?php endif; ?>
+		</div>
 		<?php
 	}
 

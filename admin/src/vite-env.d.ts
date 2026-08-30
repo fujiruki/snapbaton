@@ -10,6 +10,7 @@ interface SnapBatonData {
   canManage: boolean;
   uploadUrl: string;
   uploadPass: string;
+  feedbackToken: string;
 }
 
 declare const snapbatonData: SnapBatonData;

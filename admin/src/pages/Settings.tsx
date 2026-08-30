@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ExternalLink, BookOpen, Copy } from 'lucide-react';
+import { ExternalLink, BookOpen, Copy, RefreshCw } from 'lucide-react';
 import api from '../api';
 import { useToast } from '../hooks/useToast';
 import { Toast } from '../components/Toast';
@@ -15,6 +15,8 @@ interface GalleryPage {
 export function Settings() {
   const [pages, setPages] = useState<GalleryPage[]>([]);
   const [loading, setLoading] = useState(true);
+  const [feedbackToken, setFeedbackToken] = useState(snapbatonData.feedbackToken);
+  const [regenerating, setRegenerating] = useState(false);
   const toast = useToast();
 
   useEffect(() => {
@@ -27,6 +29,27 @@ export function Settings() {
   const copyShortcode = (code: string) => {
     navigator.clipboard.writeText(code);
     toast.show('ショートコードをコピーしました');
+  };
+
+  const copyToken = () => {
+    navigator.clipboard.writeText(feedbackToken);
+    toast.show('トークンをコピーしました');
+  };
+
+  const regenerateToken = async () => {
+    if (!confirm('トークンを再発行しますか？古いトークンは使えなくなります。')) {
+      return;
+    }
+    setRegenerating(true);
+    try {
+      const data = await api.post<{ token: string }>('/admin/feedback-token/regenerate', {});
+      setFeedbackToken(data.token);
+      toast.show('トークンを再発行しました');
+    } catch {
+      toast.show('再発行に失敗しました');
+    } finally {
+      setRegenerating(false);
+    }
   };
 
   return (
@@ -104,6 +127,18 @@ export function Settings() {
               <td>true</td>
               <td></td>
             </tr>
+            <tr>
+              <td><code>show_image_description</code></td>
+              <td>各画像のタイトル下に画像の説明文を表示するか（true/false）</td>
+              <td>false</td>
+              <td></td>
+            </tr>
+            <tr>
+              <td><code>groups_per_page</code></td>
+              <td>1ページに表示するグループ数。超過分はページングで表示</td>
+              <td>6</td>
+              <td></td>
+            </tr>
           </tbody>
         </table>
 
@@ -117,6 +152,12 @@ export function Settings() {
         <div className="sb-code-block" style={{ marginTop: '6px' }}>
           <code>[snapbaton_gallery group_id="1,3" show_description="false"]</code>
           <button className="button button-small" onClick={() => copyShortcode('[snapbaton_gallery group_id="1,3" show_description="false"]')}>
+            <Copy size={12} />
+          </button>
+        </div>
+        <div className="sb-code-block" style={{ marginTop: '6px' }}>
+          <code>[snapbaton_gallery show_image_description="true" groups_per_page="4"]</code>
+          <button className="button button-small" onClick={() => copyShortcode('[snapbaton_gallery show_image_description="true" groups_per_page="4"]')}>
             <Copy size={12} />
           </button>
         </div>
@@ -171,6 +212,29 @@ export function Settings() {
             </tbody>
           </table>
         )}
+      </div>
+
+      {/* 改善要望API連携 */}
+      <div className="sb-card-section" style={{ marginTop: '24px' }}>
+        <h2>改善要望API連携</h2>
+        <p style={{ color: '#646970' }}>Claudeが改善要望を取得するための管理用APIトークンです。</p>
+        <div className="sb-code-block" style={{ marginTop: '8px' }}>
+          <code>{feedbackToken || '未発行'}</code>
+          {feedbackToken && (
+            <button className="button button-small" onClick={copyToken}>
+              <Copy size={12} />
+            </button>
+          )}
+        </div>
+        <button
+          className="button"
+          style={{ marginTop: '8px' }}
+          onClick={regenerateToken}
+          disabled={regenerating}
+        >
+          <RefreshCw size={12} style={{ verticalAlign: 'middle', marginRight: '4px' }} />
+          トークンを再発行
+        </button>
       </div>
 
       <Toast message={toast.message} />

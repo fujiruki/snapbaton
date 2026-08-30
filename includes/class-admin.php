@@ -76,18 +76,22 @@ class Admin {
 		}
 
 		$css_file = file_exists( $build_dir . 'assets/main.css' ) ? 'main.css' : 'index.css';
+		$css_path = $build_dir . 'assets/' . $css_file;
+		$css_ver  = file_exists( $css_path ) ? (string) filemtime( $css_path ) : SNAPBATON_VERSION;
+		$js_ver   = (string) filemtime( $asset_file );
+
 		wp_enqueue_style(
 			'snapbaton-admin',
 			$build_url . 'assets/' . $css_file,
 			[],
-			SNAPBATON_VERSION
+			$css_ver
 		);
 
 		wp_enqueue_script(
 			'snapbaton-admin',
 			$build_url . 'assets/index.js',
 			[ 'wp-element' ],
-			SNAPBATON_VERSION,
+			$js_ver,
 			true
 		);
 
@@ -101,6 +105,7 @@ class Admin {
 			'canManage'  => current_user_can( 'manage_options' ),
 			'uploadUrl'  => rest_url( 'snapbaton/v1/upload-page' ),
 			'uploadPass' => current_user_can( 'manage_options' ) ? get_option( 'snapbaton_upload_passcode', '' ) : '',
+			'feedbackToken' => current_user_can( 'manage_options' ) ? get_option( 'snapbaton_admin_feedback_token', '' ) : '',
 		] );
 	}
 }

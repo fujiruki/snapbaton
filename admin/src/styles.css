@@ -654,3 +654,129 @@
 @keyframes sb-spin {
   to { transform: rotate(360deg); }
 }
+
+/* ===== Feedback ===== */
+.sb-feedback-fab {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #2271b1;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+  z-index: 99999;
+}
+
+.sb-feedback-fab:hover {
+  background: #135e96;
+}
+
+.sb-feedback-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 100000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sb-feedback-modal {
+  background: #fff;
+  border-radius: 8px;
+  padding: 20px;
+  width: 90%;
+  max-width: 480px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+}
+
+.sb-feedback-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.sb-feedback-header h3 {
+  margin: 0;
+}
+
+.sb-feedback-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #646970;
+  padding: 4px;
+}
+
+.sb-feedback-error {
+  background: #fef0f0;
+  color: #d70015;
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: 13px;
+  margin-bottom: 12px;
+}
+
+.sb-feedback-textarea {
+  width: 100%;
+  resize: vertical;
+  font-size: 14px;
+}
+
+.sb-feedback-images {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
+.sb-feedback-thumb {
+  position: relative;
+  width: 64px;
+  height: 64px;
+}
+
+.sb-feedback-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 4px;
+}
+
+.sb-feedback-thumb-remove {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #d70015;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.sb-feedback-actions-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.sb-feedback-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
+}

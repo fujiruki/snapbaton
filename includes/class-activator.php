@@ -100,6 +100,26 @@ class Activator {
 			sort_order int NOT NULL DEFAULT 0,
 			PRIMARY KEY  (post_set_id, image_id),
 			KEY image_id (image_id)
+		) {$charset_collate};
+
+		CREATE TABLE {$prefix}feedback (
+			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+			message longtext NOT NULL,
+			page_key varchar(50) NOT NULL DEFAULT '',
+			user_agent varchar(255) NOT NULL DEFAULT '',
+			resolved_at datetime DEFAULT NULL,
+			created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			PRIMARY KEY  (id),
+			KEY resolved_at (resolved_at)
+		) {$charset_collate};
+
+		CREATE TABLE {$prefix}feedback_images (
+			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+			feedback_id bigint(20) unsigned NOT NULL,
+			attachment_id bigint(20) unsigned NOT NULL DEFAULT 0,
+			sort_order int NOT NULL DEFAULT 0,
+			PRIMARY KEY  (id),
+			KEY feedback_id (feedback_id)
 		) {$charset_collate};";
 
 		require_once ABSPATH . 'wp-admin/includes/upgrade.php';

@@ -328,6 +328,22 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans",sans-serif;bac
 .sb-thumbs .sb-thumb.dragging{opacity:.4}
 .hidden{display:none}
 .sb-install-banner{background:#0071e3;color:#fff;border-radius:10px;padding:12px 16px;margin-bottom:16px;font-size:13px;text-align:center;cursor:pointer}
+.sb-fb-fab{position:fixed;bottom:20px;right:20px;width:48px;height:48px;border-radius:50%;background:#1d1d1f;color:#fff;border:none;font-size:22px;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.25);z-index:200}
+.sb-fb-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:201;display:flex;align-items:center;justify-content:center;padding:16px}
+.sb-fb-modal{background:#fff;border-radius:14px;padding:20px;width:100%;max-width:420px;max-height:90vh;overflow-y:auto}
+.sb-fb-modal h3{font-size:16px;margin-bottom:12px}
+.sb-fb-textarea{width:100%;min-height:100px;padding:10px;border:1px solid #d2d2d7;border-radius:8px;font-size:15px;resize:vertical;margin-bottom:10px}
+.sb-fb-imgs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.sb-fb-thumb{position:relative;width:60px;height:60px}
+.sb-fb-thumb img{width:100%;height:100%;object-fit:cover;border-radius:6px}
+.sb-fb-thumb button{position:absolute;top:-6px;right:-6px;width:18px;height:18px;border-radius:50%;background:#d70015;color:#fff;border:none;font-size:11px;line-height:1;cursor:pointer}
+.sb-fb-row{display:flex;gap:8px;margin-bottom:12px}
+.sb-fb-row button{flex:1;padding:10px;border:1px solid #d2d2d7;border-radius:8px;background:#f5f5f7;font-size:13px;cursor:pointer}
+.sb-fb-footer{display:flex;gap:8px}
+.sb-fb-footer button{flex:1;padding:12px;border:none;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer}
+.sb-fb-cancel{background:#e8e8ed;color:#1d1d1f}
+.sb-fb-submit{background:#0071e3;color:#fff}
+.sb-fb-submit:disabled{opacity:.5}
 </style>
 </head>
 <body>
@@ -387,6 +403,26 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans",sans-serif;bac
       </div>
       <button class="sb-btn sb-btn-primary" id="btn-more" style="margin-top:12px">続けてアップロード</button>
       <button class="sb-btn sb-btn-secondary" id="btn-restart">グループを変更</button>
+    </div>
+  </div>
+</div>
+
+<!-- 改善要望フィードバック -->
+<button class="sb-fb-fab" id="fb-fab" title="改善要望を送る">💬</button>
+<div class="sb-fb-overlay hidden" id="fb-overlay">
+  <div class="sb-fb-modal">
+    <h3>改善要望を送る</h3>
+    <div id="fb-error" class="sb-error hidden"></div>
+    <textarea class="sb-fb-textarea" id="fb-message" placeholder="不具合・改善要望を入力してください"></textarea>
+    <div class="sb-fb-imgs" id="fb-imgs"></div>
+    <input type="file" id="fb-file-input" accept="image/*" multiple style="display:none">
+    <div class="sb-fb-row">
+      <button id="fb-add-image">＋ 画像を追加</button>
+      <button id="fb-paste">📋 貼り付け</button>
+    </div>
+    <div class="sb-fb-footer">
+      <button class="sb-fb-cancel" id="fb-cancel">キャンセル</button>
+      <button class="sb-fb-submit" id="fb-submit">送信</button>
     </div>
   </div>
 </div>
@@ -662,6 +698,122 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans",sans-serif;bac
     selectedGroupName = '';
     loadGroups();
     showStep('group');
+  });
+
+  // === 改善要望フィードバック ===
+  const fbFab = document.getElementById('fb-fab');
+  const fbOverlay = document.getElementById('fb-overlay');
+  const fbMessage = document.getElementById('fb-message');
+  const fbError = document.getElementById('fb-error');
+  const fbImgsEl = document.getElementById('fb-imgs');
+  const fbFileInput = document.getElementById('fb-file-input');
+  const fbSubmit = document.getElementById('fb-submit');
+  const FB_MAX_IMAGES = 5;
+  let fbImages = [];
+
+  function fbRenderImages() {
+    fbImgsEl.innerHTML = '';
+    fbImages.forEach(function(file, i) {
+      var wrap = document.createElement('div');
+      wrap.className = 'sb-fb-thumb';
+      var img = document.createElement('img');
+      img.src = URL.createObjectURL(file);
+      var btn = document.createElement('button');
+      btn.textContent = '×';
+      btn.addEventListener('click', function() {
+        fbImages.splice(i, 1);
+        fbRenderImages();
+      });
+      wrap.appendChild(img);
+      wrap.appendChild(btn);
+      fbImgsEl.appendChild(wrap);
+    });
+  }
+
+  function fbAddImages(files) {
+    fbImages = fbImages.concat(Array.from(files)).slice(0, FB_MAX_IMAGES);
+    fbRenderImages();
+  }
+
+  fbFab.addEventListener('click', function() {
+    fbMessage.value = '';
+    fbImages = [];
+    fbRenderImages();
+    fbError.classList.add('hidden');
+    fbOverlay.classList.remove('hidden');
+    fbMessage.focus();
+  });
+
+  document.getElementById('fb-cancel').addEventListener('click', function() {
+    fbOverlay.classList.add('hidden');
+  });
+
+  document.getElementById('fb-add-image').addEventListener('click', function() {
+    fbFileInput.click();
+  });
+
+  fbFileInput.addEventListener('change', function() {
+    fbAddImages(fbFileInput.files);
+    fbFileInput.value = '';
+  });
+
+  fbMessage.addEventListener('paste', function(e) {
+    var files = Array.from(e.clipboardData.files).filter(function(f) { return f.type.indexOf('image/') === 0; });
+    if (files.length > 0) fbAddImages(files);
+  });
+
+  document.getElementById('fb-paste').addEventListener('click', async function() {
+    try {
+      var items = await navigator.clipboard.read();
+      var files = [];
+      for (var item of items) {
+        var imgType = item.types.find(function(t) { return t.indexOf('image/') === 0; });
+        if (imgType) {
+          var blob = await item.getType(imgType);
+          files.push(new File([blob], 'clipboard.' + imgType.split('/')[1], { type: imgType }));
+        }
+      }
+      if (files.length > 0) {
+        fbAddImages(files);
+      } else {
+        fbError.textContent = 'クリップボードに画像がありません。';
+        fbError.classList.remove('hidden');
+      }
+    } catch (err) {
+      fbError.textContent = 'クリップボードから画像を取得できませんでした。';
+      fbError.classList.remove('hidden');
+    }
+  });
+
+  fbSubmit.addEventListener('click', async function() {
+    var message = fbMessage.value.trim();
+    if (!message) {
+      fbError.textContent = '本文を入力してください。';
+      fbError.classList.remove('hidden');
+      return;
+    }
+    fbSubmit.disabled = true;
+    fbError.classList.add('hidden');
+    try {
+      var fd = new FormData();
+      fd.append('message', message);
+      fd.append('page_key', 'public-upload');
+      fbImages.forEach(function(file) { fd.append('images[]', file); });
+      var res = await fetch(API + '/feedback', { method: 'POST', body: fd });
+      var data = await res.json().catch(function() { return {}; });
+      if (!res.ok) throw new Error(data.message || '送信に失敗しました。');
+      fbOverlay.classList.add('hidden');
+      var toast = document.createElement('div');
+      toast.className = 'sb-toast';
+      toast.textContent = '要望を送信しました';
+      document.body.appendChild(toast);
+      setTimeout(function() { toast.remove(); }, 2000);
+    } catch (err) {
+      fbError.textContent = err.message;
+      fbError.classList.remove('hidden');
+    } finally {
+      fbSubmit.disabled = false;
+    }
   });
 })();
 </script>

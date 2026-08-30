@@ -4,6 +4,7 @@ import { GroupDetail } from './pages/GroupDetail';
 import { PostSetList } from './pages/PostSetList';
 import { TrashList } from './pages/TrashList';
 import { Settings } from './pages/Settings';
+import { FeedbackButton } from './components/FeedbackButton';
 
 type Page =
   | { name: 'groups' }
@@ -24,6 +25,15 @@ export function App() {
           : { name: 'groups' }
   );
 
+  return (
+    <>
+      {renderPage(page, setPage)}
+      <FeedbackButton pageKey={page.name} />
+    </>
+  );
+}
+
+function renderPage(page: Page, setPage: (page: Page) => void) {
   switch (page.name) {
     case 'groups':
       return (
