@@ -65,6 +65,7 @@ class Activator {
 			created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			updated_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			deleted_at datetime DEFAULT NULL,
+			video_thumbnail_id bigint(20) unsigned NOT NULL DEFAULT 0,
 			PRIMARY KEY  (id),
 			KEY group_id (group_id),
 			KEY attachment_id (attachment_id),

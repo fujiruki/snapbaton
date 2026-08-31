@@ -149,12 +149,18 @@ class Gallery {
 					$is_video  = str_starts_with( get_post_mime_type( $img->attachment_id ) ?: '', 'video/' );
 				?>
 				<div class="sb-gallery-item" data-tags="<?php echo $tags_attr; ?>">
-					<?php if ( $is_video ) : ?>
+					<?php if ( $is_video ) :
+						$poster_url = $img->video_thumbnail_id
+							? wp_get_attachment_image_url( $img->video_thumbnail_id, 'medium_large' )
+							: '';
+					?>
 					<video src="<?php echo esc_url( $full_url ); ?>" muted playsinline preload="metadata"
+						<?php if ( $poster_url ) : ?>poster="<?php echo esc_url( $poster_url ); ?>"<?php endif; ?>
 						class="sb-gallery-media" data-full="<?php echo esc_url( $full_url ); ?>"
 						data-title="<?php echo esc_attr( $img->title ); ?>"
 						data-desc="<?php echo esc_attr( $img->description ); ?>"
 						data-type="video"></video>
+					<div class="sb-gallery-play-icon">&#9654;</div>
 					<?php else : ?>
 					<img src="<?php echo esc_url( $thumb_url ); ?>"
 						alt="<?php echo esc_attr( $alt ); ?>"
@@ -223,6 +229,7 @@ class Gallery {
 		.sb-gallery-grid{columns:<?php echo $columns; ?>;column-gap:12px}
 		.sb-gallery-item{break-inside:avoid;margin-bottom:12px;border-radius:8px;overflow:hidden;cursor:pointer;position:relative}
 		.sb-gallery-item img,.sb-gallery-item video{width:100%;display:block;transition:transform .3s}
+		.sb-gallery-play-icon{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:52px;height:52px;border-radius:50%;background:rgba(0,0,0,.55);color:#fff;display:flex;align-items:center;justify-content:center;font-size:20px;pointer-events:none}
 		.sb-gallery-item:hover img,.sb-gallery-item:hover video{transform:scale(1.03)}
 		.sb-gallery-item-title{padding:6px 4px 2px;font-size:12px;color:#333;text-align:center;line-height:1.4;word-break:break-word}
 		.sb-gallery-item-desc{padding:0 4px 6px;font-size:11px;color:#999;text-align:center;line-height:1.4;word-break:break-word}

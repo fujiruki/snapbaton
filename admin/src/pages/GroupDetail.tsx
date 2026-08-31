@@ -1,10 +1,12 @@
 import { useEffect, useState, useRef, DragEvent } from 'react';
-import { ArrowLeft, Upload, Grid, List, Copy, Download, Link, Image as ImageIcon, Tag, Eraser, Globe, Trash2, Star, CheckSquare, FolderInput } from 'lucide-react';
+import { ArrowLeft, Upload, Grid, List, Copy, Download, Link, Image as ImageIcon, Tag, Eraser, Globe, Trash2, Star, CheckSquare, FolderInput, Play } from 'lucide-react';
 import api from '../api';
 import { useToast } from '../hooks/useToast';
 import { Toast } from '../components/Toast';
 import { TagInput } from '../components/TagInput';
 import { MoveImagesModal } from '../components/MoveImagesModal';
+import { VideoThumbnailPicker } from '../components/VideoThumbnailPicker';
+import { captureVideoThumbnail } from '../utils/videoThumbnail';
 import { ImageEditorLightbox, type ImageEditorSaveResult } from '@fujiruki/react-image-editor-lightbox';
 
 interface Group {
@@ -25,6 +27,8 @@ interface ImageItem {
   sort_order: number;
   tags: string[];
   attachment_id: number;
+  is_video: boolean;
+  video_thumbnail: string | null;
 }
 
 interface Props {
@@ -42,6 +46,7 @@ export function GroupDetail({ groupId, onBack }: Props) {
   const [showGroupTags, setShowGroupTags] = useState(false);
   const [expandedTagId, setExpandedTagId] = useState<number | null>(null);
   const [editorImage, setEditorImage] = useState<{ id: number; url: string; attachmentId: number } | null>(null);
+  const [videoPickerImage, setVideoPickerImage] = useState<{ id: number; url: string } | null>(null);
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [showMoveModal, setShowMoveModal] = useState(false);
@@ -61,11 +66,25 @@ export function GroupDetail({ groupId, onBack }: Props) {
     setUploadCount({ done: 0, total: fileArray.length });
 
     for (let i = 0; i < fileArray.length; i++) {
+      const file = fileArray[i]!;
       const result = await api.upload<{ id: number; attachment_id: number }>(
         `/groups/${groupId}/images`,
-        fileArray[i]!
+        file
       );
-      const newImage = await api.get<ImageItem>(`/images/${result.id}`);
+      let newImage = await api.get<ImageItem>(`/images/${result.id}`);
+
+      if (file.type.startsWith('video/')) {
+        try {
+          const thumbBlob = await captureVideoThumbnail(file);
+          const thumbFile = new File([thumbBlob], 'thumb.jpg', { type: 'image/jpeg' });
+          const thumbResult = await api.upload<{ video_thumbnail: string }>(
+            `/images/${result.id}/video-thumbnail`,
+            thumbFile
+          );
+          newImage = { ...newImage, video_thumbnail: thumbResult.video_thumbnail };
+        } catch {}
+      }
+
       setImages((prev) => [...prev, newImage]);
       setUploadCount({ done: i + 1, total: fileArray.length });
     }
@@ -451,12 +470,30 @@ export function GroupDetail({ groupId, onBack }: Props) {
                   style={{ position: 'absolute', top: '6px', right: '6px', width: '18px', height: '18px', zIndex: 1 }}
                 />
               )}
-              <img
-                src={img.thumbnail || img.url}
-                alt={img.title}
+              <div
+                className={img.is_video ? 'sb-video-thumb' : undefined}
                 style={{ cursor: 'pointer' }}
-                onClick={() => selectMode ? toggleImageSelected(img.id) : setEditorImage({ id: img.id, url: img.url, attachmentId: img.attachment_id })}
-              />
+                onClick={() => {
+                  if (selectMode) { toggleImageSelected(img.id); return; }
+                  if (img.is_video) { setVideoPickerImage({ id: img.id, url: img.url }); return; }
+                  setEditorImage({ id: img.id, url: img.url, attachmentId: img.attachment_id });
+                }}
+              >
+                {img.is_video ? (
+                  (img.video_thumbnail || img.thumbnail) ? (
+                    <img src={img.video_thumbnail || img.thumbnail} alt={img.title} />
+                  ) : (
+                    <div style={{ width: '100%', height: '180px', background: '#f0f0f1' }} />
+                  )
+                ) : (
+                  <img src={img.thumbnail || img.url} alt={img.title} />
+                )}
+                {img.is_video && (
+                  <div className="sb-play-icon-overlay">
+                    <Play size={20} fill="#fff" />
+                  </div>
+                )}
+              </div>
               <div className="sb-image-card-body">
                 <input
                   type="text"
@@ -572,11 +609,22 @@ export function GroupDetail({ groupId, onBack }: Props) {
                   </td>
                 )}
                 <td>
-                  <img
-                    src={img.thumbnail || img.url}
-                    alt={img.title}
-                    style={{ width: '60px', height: '60px', objectFit: 'cover', borderRadius: '2px' }}
-                  />
+                  <div className={img.is_video ? 'sb-video-thumb' : undefined} style={{ width: '60px', height: '60px' }}>
+                    {(img.is_video ? (img.video_thumbnail || img.thumbnail) : (img.thumbnail || img.url)) ? (
+                      <img
+                        src={img.is_video ? (img.video_thumbnail || img.thumbnail)! : (img.thumbnail || img.url)}
+                        alt={img.title}
+                        style={{ width: '60px', height: '60px', objectFit: 'cover', borderRadius: '2px' }}
+                      />
+                    ) : (
+                      <div style={{ width: '60px', height: '60px', background: '#f0f0f1', borderRadius: '2px' }} />
+                    )}
+                    {img.is_video && (
+                      <div className="sb-play-icon-overlay sb-play-icon-sm">
+                        <Play size={12} fill="#fff" />
+                      </div>
+                    )}
+                  </div>
                 </td>
                 <td>
                   <input
@@ -684,6 +732,18 @@ export function GroupDetail({ groupId, onBack }: Props) {
           imageUrl={editorImage.url}
           onSave={handleEditorSave}
           onClose={() => setEditorImage(null)}
+        />
+      )}
+
+      {videoPickerImage && (
+        <VideoThumbnailPicker
+          imageId={videoPickerImage.id}
+          videoUrl={videoPickerImage.url}
+          onSave={(url) => {
+            setImages((prev) => prev.map((i) => (i.id === videoPickerImage.id ? { ...i, video_thumbnail: url } : i)));
+            setVideoPickerImage(null);
+          }}
+          onClose={() => setVideoPickerImage(null)}
         />
       )}
 

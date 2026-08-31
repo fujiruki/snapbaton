@@ -57,6 +57,12 @@ class RestApi {
 			],
 		] );
 
+		register_rest_route( self::NAMESPACE, '/images/(?P<id>\d+)/video-thumbnail', [
+			'methods'             => 'POST',
+			'callback'            => [ self::class, 'upload_video_thumbnail' ],
+			'permission_callback' => [ Permissions::class, 'can_edit' ],
+		] );
+
 		register_rest_route( self::NAMESPACE, '/images/(?P<id>\d+)', [
 			[
 				'methods'             => 'GET',
@@ -320,6 +326,7 @@ class RestApi {
 		foreach ( $images as &$image ) {
 			$image->url       = wp_get_attachment_url( $image->attachment_id );
 			$image->thumbnail = wp_get_attachment_image_url( $image->attachment_id, 'medium' );
+			self::decorate_video_fields( $image );
 			$image->tags      = $wpdb->get_col( $wpdb->prepare(
 				"SELECT t.name FROM {$prefix}tags t
 				 INNER JOIN {$prefix}image_tags it ON t.id = it.tag_id
@@ -347,6 +354,7 @@ class RestApi {
 		$image->url       = wp_get_attachment_url( $image->attachment_id );
 		$image->thumbnail = wp_get_attachment_image_url( $image->attachment_id, 'medium' );
 		$image->full_url  = wp_get_attachment_url( $image->attachment_id );
+		self::decorate_video_fields( $image );
 		$image->tags      = $wpdb->get_col( $wpdb->prepare(
 			"SELECT t.name FROM {$prefix}tags t
 			 INNER JOIN {$prefix}image_tags it ON t.id = it.tag_id
@@ -396,8 +404,39 @@ class RestApi {
 		] );
 
 		return rest_ensure_response( [
-			'id'            => $wpdb->insert_id,
-			'attachment_id' => $attachment_id,
+			'id'              => $wpdb->insert_id,
+			'attachment_id'   => $attachment_id,
+			'is_video'        => str_starts_with( get_post_mime_type( $attachment_id ) ?: '', 'video/' ),
+			'video_thumbnail' => null,
+		] );
+	}
+
+	public static function upload_video_thumbnail( \WP_REST_Request $request ): \WP_REST_Response|\WP_Error {
+		$files = $request->get_file_params();
+		if ( empty( $files['file'] ) ) {
+			return new \WP_Error( 'no_file', __( 'No file uploaded.', 'snapbaton' ), [ 'status' => 400 ] );
+		}
+
+		require_once ABSPATH . 'wp-admin/includes/image.php';
+		require_once ABSPATH . 'wp-admin/includes/file.php';
+		require_once ABSPATH . 'wp-admin/includes/media.php';
+
+		$attachment_id = media_handle_upload( 'file', 0 );
+		if ( is_wp_error( $attachment_id ) ) {
+			return $attachment_id;
+		}
+
+		global $wpdb;
+		$prefix = $wpdb->prefix . 'snapbaton_';
+		$id     = absint( $request['id'] );
+
+		$wpdb->update( "{$prefix}images", [
+			'video_thumbnail_id' => $attachment_id,
+			'updated_at'         => current_time( 'mysql' ),
+		], [ 'id' => $id ] );
+
+		return rest_ensure_response( [
+			'video_thumbnail' => wp_get_attachment_image_url( $attachment_id, 'medium' ),
 		] );
 	}
 
@@ -604,6 +643,13 @@ class RestApi {
 	}
 
 	// --- Helpers ---
+
+	private static function decorate_video_fields( object $image ): void {
+		$image->is_video        = str_starts_with( get_post_mime_type( $image->attachment_id ) ?: '', 'video/' );
+		$image->video_thumbnail = $image->video_thumbnail_id > 0
+			? wp_get_attachment_image_url( $image->video_thumbnail_id, 'medium' )
+			: null;
+	}
 
 	private static function sync_tags( int $group_id, array $tag_names ): void {
 		global $wpdb;
