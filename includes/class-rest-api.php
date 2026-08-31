@@ -121,6 +121,13 @@ class RestApi {
 			'permission_callback' => [ Permissions::class, 'can_edit' ],
 		] );
 
+		// --- Image Move (別グループへ一括移動) ---
+		register_rest_route( self::NAMESPACE, '/groups/(?P<id>\d+)/move-images', [
+			'methods'             => 'POST',
+			'callback'            => [ self::class, 'move_images' ],
+			'permission_callback' => [ Permissions::class, 'can_edit' ],
+		] );
+
 		// --- Image Replace (エディタ保存) ---
 		register_rest_route( self::NAMESPACE, '/images/(?P<id>\d+)/replace', [
 			'methods'             => 'POST',
@@ -642,6 +649,32 @@ class RestApi {
 		}
 
 		return rest_ensure_response( [ 'reordered' => true ] );
+	}
+
+	// --- Image Move ---
+
+	public static function move_images( \WP_REST_Request $request ): \WP_REST_Response {
+		global $wpdb;
+		$prefix    = $wpdb->prefix . 'snapbaton_';
+		$group_id  = absint( $request['id'] );
+		$image_ids = $request->get_param( 'image_ids' ) ?? [];
+
+		$max_order = (int) $wpdb->get_var( $wpdb->prepare(
+			"SELECT MAX(sort_order) FROM {$prefix}images WHERE group_id = %d",
+			$group_id
+		) );
+
+		$now = current_time( 'mysql' );
+		foreach ( $image_ids as $image_id ) {
+			$max_order++;
+			$wpdb->update( "{$prefix}images", [
+				'group_id'   => $group_id,
+				'sort_order' => $max_order,
+				'updated_at' => $now,
+			], [ 'id' => absint( $image_id ) ] );
+		}
+
+		return rest_ensure_response( [ 'moved' => true ] );
 	}
 
 	// --- Image Replace ---

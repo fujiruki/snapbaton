@@ -1,9 +1,10 @@
 import { useEffect, useState, useRef, DragEvent } from 'react';
-import { ArrowLeft, Upload, Grid, List, Copy, Download, Link, Image as ImageIcon, Tag, Eraser, Globe, Trash2, Star } from 'lucide-react';
+import { ArrowLeft, Upload, Grid, List, Copy, Download, Link, Image as ImageIcon, Tag, Eraser, Globe, Trash2, Star, CheckSquare, FolderInput } from 'lucide-react';
 import api from '../api';
 import { useToast } from '../hooks/useToast';
 import { Toast } from '../components/Toast';
 import { TagInput } from '../components/TagInput';
+import { MoveImagesModal } from '../components/MoveImagesModal';
 import { ImageEditorLightbox, type ImageEditorSaveResult } from '@fujiruki/react-image-editor-lightbox';
 
 interface Group {
@@ -41,6 +42,9 @@ export function GroupDetail({ groupId, onBack }: Props) {
   const [showGroupTags, setShowGroupTags] = useState(false);
   const [expandedTagId, setExpandedTagId] = useState<number | null>(null);
   const [editorImage, setEditorImage] = useState<{ id: number; url: string; attachmentId: number } | null>(null);
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [showMoveModal, setShowMoveModal] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const toast = useToast();
 
@@ -232,6 +236,38 @@ export function GroupDetail({ groupId, onBack }: Props) {
     }
   };
 
+  // 選択モード
+  const toggleSelectMode = () => {
+    setSelectMode(!selectMode);
+    setSelectedIds(new Set());
+  };
+
+  const toggleImageSelected = (id: number) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  // 選択した画像を別グループへ移動
+  const handleMoveSelected = async (targetGroupId: number) => {
+    try {
+      await api.post(`/groups/${targetGroupId}/move-images`, { image_ids: Array.from(selectedIds) });
+      setImages((prev) => prev.filter((i) => !selectedIds.has(i.id)));
+      toast.show(`${selectedIds.size}枚の画像を移動しました`);
+      setSelectedIds(new Set());
+      setSelectMode(false);
+      setShowMoveModal(false);
+    } catch {
+      toast.show('移動に失敗しました');
+    }
+  };
+
   const copyToClipboard = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
     toast.show(`${label}をコピーしました`);
@@ -341,6 +377,15 @@ export function GroupDetail({ groupId, onBack }: Props) {
         >
           {viewMode === 'grid' ? <List size={16} /> : <Grid size={16} />}
         </button>
+        {snapbatonData.canEdit && (
+          <button
+            className={`button${selectMode ? ' button-primary' : ''}`}
+            onClick={toggleSelectMode}
+            title="複数選択して移動"
+          >
+            <CheckSquare size={16} /> {selectMode ? '選択を終了' : '選択'}
+          </button>
+        )}
         <span style={{ color: '#a7aaad', fontSize: '13px' }}>
           {images.length} 枚
         </span>
@@ -387,7 +432,8 @@ export function GroupDetail({ groupId, onBack }: Props) {
             <div
               key={`${img.id}-${img.title}-${img.description}`}
               className={`sb-image-card${group.cover_image_id === img.id ? ' sb-cover-card' : ''}`}
-              draggable
+              style={selectedIds.has(img.id) ? { outline: '2px solid #2271b1', outlineOffset: '-2px' } : undefined}
+              draggable={!selectMode}
               onDragStart={(e) => handleDragStart(e, idx)}
               onDragOver={(e) => e.preventDefault()}
               onDrop={(e) => handleDropReorder(e, idx)}
@@ -397,11 +443,19 @@ export function GroupDetail({ groupId, onBack }: Props) {
                   <Star size={10} fill="#fff" /> アイキャッチ
                 </div>
               )}
+              {selectMode && (
+                <input
+                  type="checkbox"
+                  checked={selectedIds.has(img.id)}
+                  onChange={() => toggleImageSelected(img.id)}
+                  style={{ position: 'absolute', top: '6px', right: '6px', width: '18px', height: '18px', zIndex: 1 }}
+                />
+              )}
               <img
                 src={img.thumbnail || img.url}
                 alt={img.title}
                 style={{ cursor: 'pointer' }}
-                onClick={() => setEditorImage({ id: img.id, url: img.url, attachmentId: img.attachment_id })}
+                onClick={() => selectMode ? toggleImageSelected(img.id) : setEditorImage({ id: img.id, url: img.url, attachmentId: img.attachment_id })}
               />
               <div className="sb-image-card-body">
                 <input
@@ -497,6 +551,7 @@ export function GroupDetail({ groupId, onBack }: Props) {
         <table className="wp-list-table widefat fixed striped">
           <thead>
             <tr>
+              {selectMode && <th style={{ width: '32px' }} />}
               <th style={{ width: '80px' }}>画像</th>
               <th>タイトル</th>
               <th>説明文</th>
@@ -507,6 +562,15 @@ export function GroupDetail({ groupId, onBack }: Props) {
           <tbody>
             {images.map((img) => (
               <tr key={`${img.id}-${img.title}-${img.description}`}>
+                {selectMode && (
+                  <td>
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.has(img.id)}
+                      onChange={() => toggleImageSelected(img.id)}
+                    />
+                  </td>
+                )}
                 <td>
                   <img
                     src={img.thumbnail || img.url}
@@ -620,6 +684,34 @@ export function GroupDetail({ groupId, onBack }: Props) {
           imageUrl={editorImage.url}
           onSave={handleEditorSave}
           onClose={() => setEditorImage(null)}
+        />
+      )}
+
+      {selectMode && selectedIds.size > 0 && (
+        <div
+          style={{
+            position: 'fixed', bottom: 0, left: 0, right: 0, background: '#1d2327', color: '#fff',
+            padding: '12px 24px', display: 'flex', alignItems: 'center', gap: '12px', zIndex: 99999,
+            boxShadow: '0 -2px 8px rgba(0, 0, 0, 0.2)',
+          }}
+        >
+          <span>{selectedIds.size}件選択中</span>
+          <button className="button button-primary" onClick={() => setShowMoveModal(true)}>
+            <FolderInput size={14} /> 別のグループへ移動
+          </button>
+          <button className="button button-primary" onClick={() => setShowMoveModal(true)}>
+            <FolderInput size={14} /> 新しいグループを作成して移動
+          </button>
+          <button className="button" onClick={() => setSelectedIds(new Set())}>キャンセル</button>
+        </div>
+      )}
+
+      {showMoveModal && (
+        <MoveImagesModal
+          currentGroupId={groupId}
+          count={selectedIds.size}
+          onClose={() => setShowMoveModal(false)}
+          onMove={handleMoveSelected}
         />
       )}
     </div>
